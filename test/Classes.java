@@ -11,7 +11,9 @@ class Classes {
 }
 
 class Base {
-	int data;
+	int var;
+	boolean data;
+	boolean varII;
 	public int set(int x) {
 		data = x;
 		return data;
@@ -22,8 +24,14 @@ class Base {
 }
 
 class Derived extends Base {
+	int myVar;
+	boolean myData;
+	int myVarII;
 	public int set(int x) {
 		data = x * 2;
 		return data;
+	}
+	public int myMethod(){
+		return 0;
 	}
 }

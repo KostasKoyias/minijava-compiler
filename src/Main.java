@@ -7,7 +7,7 @@ import javafx.util.Pair;
 import java.io.*;
 
 class Main {
-    public static void main (String [] args) throws RuntimeException{
+    public static void main (String [] args) throws Exception{
         FileInputStream fis = null;
 
         /* for each file path given from the cmd */

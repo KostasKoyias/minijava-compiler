@@ -1,7 +1,5 @@
 import java.util.Map;
 import javafx.util.Pair;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.LinkedHashMap; 
 import visitor.GJDepthFirst;
 import syntaxtree.*;
@@ -11,6 +9,7 @@ public class FirstVisitor extends GJDepthFirst<String, ClassData>{
     /* use a map list storing (class_name, meta_data) pairs */
     public Map <String, ClassData> classes;
     private Integer nextVar, nextMethod;
+    private final Integer pointerSize = 8;
 
     /* map all mini java data types to their actual size in bytes */
     private final Map<String, Integer> offsets = new LinkedHashMap<String, Integer>() {
@@ -22,11 +21,24 @@ public class FirstVisitor extends GJDepthFirst<String, ClassData>{
     };
        
 
-    /* Constructor: initialize the map */ 
+    /* Constructor: initialize the map and the offsets*/ 
     public FirstVisitor(){
         this.classes = new LinkedHashMap<String, ClassData>();
-        this.nextVar = new Integer(0);
+        this.nextVar = new Integer(this.pointerSize);
         this.nextMethod = new Integer(0);
+    }
+
+    /* given a variable_name to (type, offset) map, calculate the exact memory address for the next variable to be stored */
+    private int getOffsetOfNextVar(Map <String, Pair<String, Integer>> map){
+        int offset = 0;
+        String type;
+
+        /* run through each variable entry and sum up the sizes */
+        for(Map.Entry<String, Pair<String, Integer>> var: map.entrySet()){
+            type = var.getValue().getKey();
+            offset += this.offsets.containsKey(type) ? this.offsets.get(type) : this.pointerSize;
+        }
+        return offset + this.pointerSize;
     }
 
     /*  Goal
@@ -34,7 +46,7 @@ public class FirstVisitor extends GJDepthFirst<String, ClassData>{
      f1 -> ( TypeDeclaration() )*
      f2 -> <EOF>
     */
-    public String visit(Goal node, ClassData data) throws RuntimeException{
+    public String visit(Goal node, ClassData data){
 
         // omit Main class, visit all user-defined classes 
         for(int i = 0; i < node.f1.size(); i++)
@@ -44,10 +56,10 @@ public class FirstVisitor extends GJDepthFirst<String, ClassData>{
 
     /* TypeDeclaration
     f0 -> ClassDeclaration() | ClassExtendsDeclaration() */
-    public String visit(TypeDeclaration node, ClassData data) throws RuntimeException{
+    public String visit(TypeDeclaration node, ClassData data){
 
         /* initialize offsets for each new class*/
-        this.nextVar = 8;
+        this.nextVar = 0 + this.pointerSize;
         this.nextMethod = 0;
         node.f0.accept(this, null);
         return null;
@@ -59,7 +71,7 @@ public class FirstVisitor extends GJDepthFirst<String, ClassData>{
         f4 -> ( MethodDeclaration() )*
     }
     */
-    public String visit(ClassDeclaration node, ClassData data) throws RuntimeException{
+    public String visit(ClassDeclaration node, ClassData data){
         String id = node.f1.accept(this, null);
         ClassData cd = new ClassData(null);
 
@@ -88,7 +100,9 @@ public class FirstVisitor extends GJDepthFirst<String, ClassData>{
         /* Pass a meta data object down to the declarations sections, derived class inherits all fields and methods */ 
         ClassData cd = new ClassData(parent), cdParent = this.classes.get(parent);
         cd.vars.putAll(cdParent.vars);
-        //cd.methods.putAll(cdParent.methods);
+        cd.methods.putAll(cdParent.methods);
+        this.nextVar = getOffsetOfNextVar(cdParent.vars);
+        this.nextMethod = cd.methods.size() * this.pointerSize;
 
         /* pass ClassData to each field */
     	for (int i = 0; i < node.f5.size(); i++)
@@ -106,7 +120,7 @@ public class FirstVisitor extends GJDepthFirst<String, ClassData>{
         f0 -> Type()
         f1 -> Identifier()
     bind each variable name/id to a type*/
-    public String visit(VarDeclaration node, ClassData data) throws RuntimeException{
+    public String visit(VarDeclaration node, ClassData data){
         String type = node.f0.accept(this, null);
         String id = node.f1.accept(this, null);
 
@@ -115,14 +129,13 @@ public class FirstVisitor extends GJDepthFirst<String, ClassData>{
 
         /* if it is not about a variable declared in a method, but in a class, update lookup Table */
         if(data != null){
-            this.nextVar += this.offsets.containsKey(type) ? this.offsets.get(type) : 8;
             data.vars.put(id, pair);
+            this.nextVar += this.offsets.containsKey(type) ? this.offsets.get(type) : this.pointerSize;
         }
         return null;
     }
 
-    /*
-        public f1 -> Type() f2 -> Identifier() (f4 -> ( FormalParameterList() )?){
+    /*  public f1 -> Type() f2 -> Identifier() (f4 -> ( FormalParameterList() )?){
             f7 -> ( VarDeclaration() )*
             f8 -> ( Statement() )*
             return f10 -> Expression();
@@ -137,11 +150,11 @@ public class FirstVisitor extends GJDepthFirst<String, ClassData>{
         ClassData parentClassData = this.classes.get(parent);
         boolean over = parentClassData != null && parentClassData.methods.containsKey(id);
 
-        /* store a pointer to the method and calculate the exact memory address for the next one to be stored */
+        /* if it does not, store a pointer to it and calculate the exact memory address for the next method to be stored */
         Pair<String, Integer> pair = new Pair<String, Integer>(type, this.nextMethod);
         if(!over){
-            this.nextMethod += 8;
             data.methods.put(id, pair);
+            this.nextMethod += 8;
         }
         return null;
     }

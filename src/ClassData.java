@@ -8,10 +8,33 @@ public class ClassData{
     String parentName;
     Map <String, Pair<String, Integer>> vars;       // records of form: (variable_name, (type, offset))
     Map <String, Pair<String, Integer>> methods;    // records of form: (function_name, (return_type, offset))
+    public static final Integer pointerSize = 8;
+
+    /* map all mini java data types to their actual size in bytes */
+    public static final Map<String, Integer> offsets = new LinkedHashMap<String, Integer>() {
+        private static final long serialVersionUID = 1L;
+        {
+            put("boolean", 1);
+            put("integer", 4);
+        }
+    };
 
     public ClassData(String parent){
         this.parentName = parent;
         this.vars = new LinkedHashMap<String, Pair<String, Integer>>();
         this.methods = new LinkedHashMap<String, Pair<String, Integer>>();
+    }
+
+    /* given a variable_name to (type, offset) map, calculate the exact memory address for the next variable to be stored */
+    public int getOffsetOfNextVar(){
+        int offset = 0;
+        String type;
+
+        /* run through each variable entry and sum up the sizes */
+        for(Map.Entry<String, Pair<String, Integer>> var: this.vars.entrySet()){
+            type = var.getValue().getKey();
+            offset += ClassData.offsets.containsKey(type) ? ClassData.offsets.get(type) : ClassData.pointerSize;
+        }
+        return offset + ClassData.pointerSize;
     }
 }

@@ -1,6 +1,7 @@
 old
-build/*
+build/*.class
 examples
+src/Test*
 src/.vscode
 src/*.class 
 src/*~ 

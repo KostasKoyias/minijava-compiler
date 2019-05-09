@@ -9,36 +9,12 @@ public class FirstVisitor extends GJDepthFirst<String, ClassData>{
     /* use a map list storing (class_name, meta_data) pairs */
     public Map <String, ClassData> classes;
     private Integer nextVar, nextMethod;
-    private final Integer pointerSize = 8;
-
-    /* map all mini java data types to their actual size in bytes */
-    private final Map<String, Integer> offsets = new LinkedHashMap<String, Integer>() {
-        private static final long serialVersionUID = 1L;
-        {
-            put("boolean", 1);
-            put("integer", 4);
-        }
-    };
-       
 
     /* Constructor: initialize the map and the offsets*/ 
     public FirstVisitor(){
         this.classes = new LinkedHashMap<String, ClassData>();
-        this.nextVar = new Integer(this.pointerSize);
+        this.nextVar = new Integer(ClassData.pointerSize);
         this.nextMethod = new Integer(0);
-    }
-
-    /* given a variable_name to (type, offset) map, calculate the exact memory address for the next variable to be stored */
-    private int getOffsetOfNextVar(Map <String, Pair<String, Integer>> map){
-        int offset = 0;
-        String type;
-
-        /* run through each variable entry and sum up the sizes */
-        for(Map.Entry<String, Pair<String, Integer>> var: map.entrySet()){
-            type = var.getValue().getKey();
-            offset += this.offsets.containsKey(type) ? this.offsets.get(type) : this.pointerSize;
-        }
-        return offset + this.pointerSize;
     }
 
     /*  Goal
@@ -59,7 +35,7 @@ public class FirstVisitor extends GJDepthFirst<String, ClassData>{
     public String visit(TypeDeclaration node, ClassData data){
 
         /* initialize offsets for each new class*/
-        this.nextVar = 0 + this.pointerSize;
+        this.nextVar = 0 + ClassData.pointerSize;
         this.nextMethod = 0;
         node.f0.accept(this, null);
         return null;
@@ -101,8 +77,8 @@ public class FirstVisitor extends GJDepthFirst<String, ClassData>{
         ClassData cd = new ClassData(parent), cdParent = this.classes.get(parent);
         cd.vars.putAll(cdParent.vars);
         cd.methods.putAll(cdParent.methods);
-        this.nextVar = getOffsetOfNextVar(cdParent.vars);
-        this.nextMethod = cd.methods.size() * this.pointerSize;
+        this.nextVar = cdParent.getOffsetOfNextVar();
+        this.nextMethod = cd.methods.size() * ClassData.pointerSize;
 
         /* pass ClassData to each field */
     	for (int i = 0; i < node.f5.size(); i++)
@@ -130,7 +106,7 @@ public class FirstVisitor extends GJDepthFirst<String, ClassData>{
         /* if it is not about a variable declared in a method, but in a class, update lookup Table */
         if(data != null){
             data.vars.put(id, pair);
-            this.nextVar += this.offsets.containsKey(type) ? this.offsets.get(type) : this.pointerSize;
+            this.nextVar += ClassData.offsets.containsKey(type) ? ClassData.offsets.get(type) : ClassData.pointerSize;
         }
         return null;
     }

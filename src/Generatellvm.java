@@ -10,11 +10,13 @@ public class Generatellvm extends GJNoArguDepthFirst<String>{
     private Map<String, ClassData> data;
     private String className;
 
+    // Constructor: set a pointer to output file and set class data collected during the first pass
     Generatellvm(BufferedWriter out, Map<String, ClassData> data){
         this.out = out;
         this.data = data;
     }  
 
+    // append a String in the file to be generated
 	private void emit(String s){
 		try{
             this.out.write(s + "\n");
@@ -24,17 +26,35 @@ public class Generatellvm extends GJNoArguDepthFirst<String>{
 		}
     }
 
-    private String declareMethods(Map<String, Pair<String, Integer>> methods){
-        String ret = "";
-        for(Map.Entry<String, Pair<String, Integer>> entry : methods.entrySet())
-            ret += "i8* bitcast (" + ClassData.offsets.get(entry.getValue().getKey())*8 + " (args)*" + " @" + entry.getKey() + " to i8*)";
-        return ret;
+    // given an array of mini-java types, return a comma-separated String with their corresponding llvm types (e.g int -> i32)  
+    private String getArgs(String[] args){
+        String rv = "";
+        int i = 0;
+        if(args != null)
+            for(String arg : args)
+                rv += ClassData.sizes.get(arg).getValue() + (++i < args.length ? ", " : "");
+        return rv;
     }
 
+    // return a comma-separated String representing all methods of a class in low-level
+    private String declareMethods(String className, Map<String, Triplet<String, Integer, String[]>> methods){
+        String rv = "", methodName, retType;
+        int i = 0;
+
+        // for each method append: 1.return type and 2.arguments to the String to be returned
+        for(Map.Entry<String, Triplet<String, Integer, String[]>> entry : methods.entrySet()){
+            retType = ClassData.sizes.get(entry.getValue().getFirst()).getValue();
+            methodName = entry.getKey();
+            rv += "i8* bitcast (" + retType + " (" + this.getArgs(entry.getValue().getThird()) + ")* @" + className + "." + methodName + " to i8*)";
+            rv += ++i < methods.size() ? ", " : ""; 
+        }
+        return rv;
+    }
+
+    // declare a global vTable for a class
     private void declareVTable(String className, ClassData data){
         int methods = data.methods.size();
-        emit("@." + className + "_vtable = global [" + methods + "x i8*] [" + this.declareMethods(data.methods) + "]");
-        //@.Fac_vtable = global [1 x i8*] [i8* bitcast (i32 (i8*,i32)* @Fac.ComputeFac to i8*)]
+        emit("@." + className + "_vtable = global [" + methods + "x i8*] [" + this.declareMethods(className, data.methods) + "]");
     }
     
     /*  Goal
@@ -43,9 +63,12 @@ public class Generatellvm extends GJNoArguDepthFirst<String>{
      f2 -> <EOF>
     */
     public String visit(Goal node){
+
+        // for each class, declare a global vTable in the .ll file
         for(Map.Entry<String, ClassData> entry : this.data.entrySet())
             this.declareVTable(entry.getKey(), entry.getValue());
 
+        // define some utility functions in the .ll file
         emit("\n\n"
             + "declare i8* @calloc(i32, i32)\n"
             + "declare i32 @printf(i8*, ...)\n"
@@ -99,7 +122,7 @@ public class Generatellvm extends GJNoArguDepthFirst<String>{
     }
     
     public String visit(ClassDeclaration node) throws RuntimeException {
-        // pass name of the class to child nodes 
+        // pass methodName of the class to child nodes 
         this.className = node.f1.accept(this);
 
         for (int i = 0; i < node.f3.size(); i++)
@@ -117,7 +140,7 @@ public class Generatellvm extends GJNoArguDepthFirst<String>{
         }
     
     public String visit(ClassExtendsDeclaration node) throws RuntimeException {
-        // pass name of the class to child nodes 
+        // pass methodName of the class to child nodes 
         this.className = node.f1.accept(this);
        
         for (int i = 0; i < node.f5.size(); i++)

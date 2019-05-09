@@ -106,7 +106,7 @@ public class FirstVisitor extends GJDepthFirst<String, ClassData>{
         /* if it is not about a variable declared in a method, but in a class, update lookup Table */
         if(data != null){
             data.vars.put(id, pair);
-            this.nextVar += ClassData.offsets.containsKey(type) ? ClassData.offsets.get(type) : ClassData.pointerSize;
+            this.nextVar += ClassData.sizes.containsKey(type) ? ClassData.sizes.get(type).getKey() : ClassData.pointerSize;
         }
         return null;
     }
@@ -126,13 +126,44 @@ public class FirstVisitor extends GJDepthFirst<String, ClassData>{
         ClassData parentClassData = this.classes.get(parent);
         boolean over = parentClassData != null && parentClassData.methods.containsKey(id);
 
+        /* get argument types, if they exist */
+        String[] args = null;
+    	if (node.f4.present())
+            args = node.f4.accept(this, null).split(",");
+
         /* if it does not, store a pointer to it and calculate the exact memory address for the next method to be stored */
-        Pair<String, Integer> pair = new Pair<String, Integer>(type, this.nextMethod);
+        Triplet<String, Integer, String[]> triplet = new Triplet<String, Integer, String[]>(type, this.nextMethod, args);
         if(!over){
-            data.methods.put(id, pair);
+            data.methods.put(id, triplet);
             this.nextMethod += 8;
         }
         return null;
+    }
+
+    /* FormalParameterList: f0 -> FormalParameter() f1 -> FormalParameterTail() Get all parameter types a String*/
+    public String visit(FormalParameterList node, ClassData data){
+    	String head = node.f0.accept(this, null);
+        String tail = node.f1.accept(this, null);
+    	return head + tail;
+    }
+
+    /* FormalParameter f0 -> Type() f1 -> Identifier() Returns just the parameter type as a String*/
+    public String visit(FormalParameter node, ClassData data){
+        String type = node.f0.accept(this, null);
+        return type;
+    }
+
+    /* FormalParameterTail f0 -> ( FormalParameterTerm)* */
+    public String visit(FormalParameterTail node, ClassData data){
+        String retval = "";
+        for (int i = 0; i < node.f0.size(); i++)
+            retval += node.f0.elementAt(i).accept(this, null);
+        return retval;
+    }
+
+    /* FormalParameterTerm: ,f1 -> FormalParameter */
+    public String visit(FormalParameterTerm node, ClassData data){
+        return "," + node.f1.accept(this,null);
     }
 
     /* Type: f0 -> ArrayType() | BooleanType() | IntegerType() | Identifier() */

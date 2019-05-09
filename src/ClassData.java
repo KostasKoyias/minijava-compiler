@@ -7,22 +7,23 @@ import java.util.LinkedHashMap;
 public class ClassData{
     String parentName;
     Map <String, Pair<String, Integer>> vars;       // records of form: (variable_name, (type, offset))
-    Map <String, Pair<String, Integer>> methods;    // records of form: (function_name, (return_type, offset))
+    Map <String, Triplet<String, Integer, String[]>> methods;    // records of form: (function_name, (return_type, offset, argTypes))
     public static final Integer pointerSize = 8;
 
     /* map all mini java data types to their actual size in bytes */
-    public static final Map<String, Integer> offsets = new LinkedHashMap<String, Integer>() {
+    public static final Map<String, Pair<Integer,String>> sizes = new LinkedHashMap<String, Pair<Integer,String>>() {
         private static final long serialVersionUID = 1L;
         {
-            put("boolean", 1);
-            put("integer", 4);
+            put("boolean", new Pair(1, "i8"));
+            put("integer", new Pair(4, "i32"));
+            put("array", new Pair(8, "i8*"));
         }
     };
 
     public ClassData(String parent){
         this.parentName = parent;
         this.vars = new LinkedHashMap<String, Pair<String, Integer>>();
-        this.methods = new LinkedHashMap<String, Pair<String, Integer>>();
+        this.methods = new LinkedHashMap<String, Triplet<String, Integer, String[]>>();
     }
 
     /* given a variable_name to (type, offset) map, calculate the exact memory address for the next variable to be stored */
@@ -33,7 +34,7 @@ public class ClassData{
         /* run through each variable entry and sum up the sizes */
         for(Map.Entry<String, Pair<String, Integer>> var: this.vars.entrySet()){
             type = var.getValue().getKey();
-            offset += ClassData.offsets.containsKey(type) ? ClassData.offsets.get(type) : ClassData.pointerSize;
+            offset += ClassData.sizes.containsKey(type) ? ClassData.sizes.get(type).getKey() : ClassData.pointerSize;
         }
         return offset + ClassData.pointerSize;
     }

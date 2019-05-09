@@ -28,12 +28,12 @@ public class Generatellvm extends GJNoArguDepthFirst<String>{
 
     // given an array of mini-java types, return a comma-separated String with their corresponding llvm types (e.g int -> i32)  
     private String getArgs(String[] args){
-        String rv = "";
+        String rv = " (i8*"; // first arg is always the pointer "this"
         int i = 0;
         if(args != null)
             for(String arg : args)
-                rv += ClassData.sizes.get(arg).getValue() + (++i < args.length ? ", " : "");
-        return rv;
+                rv += (i++ < args.length ? ", " : "") + ClassData.sizes.get(arg).getValue();
+        return rv + ")*";
     }
 
     // return a comma-separated String representing all methods of a class in low-level
@@ -45,7 +45,7 @@ public class Generatellvm extends GJNoArguDepthFirst<String>{
         for(Map.Entry<String, Triplet<String, Integer, String[]>> entry : methods.entrySet()){
             retType = ClassData.sizes.get(entry.getValue().getFirst()).getValue();
             methodName = entry.getKey();
-            rv += "i8* bitcast (" + retType + " (" + this.getArgs(entry.getValue().getThird()) + ")* @" + className + "." + methodName + " to i8*)";
+            rv += "i8* bitcast (" + retType + this.getArgs(entry.getValue().getThird()) + " @" + className + "." + methodName + " to i8*)";
             rv += ++i < methods.size() ? ", " : ""; 
         }
         return rv;

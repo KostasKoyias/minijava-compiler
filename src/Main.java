@@ -8,7 +8,8 @@ import java.io.*;
 
 class Main {
     public static void main (String [] args) throws Exception{
-        FileInputStream fis = null;
+        FileInputStream fin = null;
+        FileOutputStream fout = null;
 
         /* for each file path given from the cmd */
         for(String arg : args){
@@ -16,8 +17,9 @@ class Main {
             /* try and: open, parse and visit the syntax tree of the program */
             try{
 
-                fis = new FileInputStream(arg);
-                MiniJavaParser parser = new MiniJavaParser(fis);
+                fin = new FileInputStream(arg);
+                fout = new FileOutputStream(arg.replace("java", "ll"));
+                MiniJavaParser parser = new MiniJavaParser(fin);
 
                 /* first, traverse the tree to get offset data for each class */
                 FirstVisitor v0 = new FirstVisitor();
@@ -53,7 +55,8 @@ class Main {
             /* clean things up */
             finally{
                 try{
-                    if(fis != null) fis.close();
+                    if(fin != null) fin.close();
+                    if(fout != null) fout.close();
                 }
                 catch(IOException ex){
                     System.err.println(ex.getMessage());

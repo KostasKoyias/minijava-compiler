@@ -1,4 +1,6 @@
 old
+build/*
+examples
 src/.vscode
 src/*.class 
 src/*~ 

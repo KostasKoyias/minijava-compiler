@@ -13,7 +13,7 @@ public class ClassData{
     private static final Map<String, Pair<Integer,String>> sizes = new LinkedHashMap<String, Pair<Integer,String>>() {
         private static final long serialVersionUID = 1L;
         {
-            put("boolean", new Pair(1, "i8"));
+            put("boolean", new Pair(1, "i1"));
             put("integer", new Pair(4, "i32"));
             put("array", new Pair(8, "i8*"));
         }

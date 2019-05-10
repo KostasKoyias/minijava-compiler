@@ -9,12 +9,20 @@ public class Generatellvm extends GJNoArguDepthFirst<String>{
     private BufferedWriter out;
     protected Map<String, ClassData> data;
     private String className;
+    private int regs;
+    private ArrayList<Pair<String, String>> scope;
 
     // Constructor: set a pointer to output file and set class data collected during the first pass
     Generatellvm(BufferedWriter out, Map<String, ClassData> data){
         this.out = out;
         this.data = data;
+        this.regs = 0;
+        this.scope = new ArrayList<Pair<String, String>>();
     }  
+
+    private String nextReg(){
+        return "%_" + this.regs++;
+    }
 
     // append a String in the file to be generated
 	protected void emit(String s){
@@ -93,6 +101,7 @@ public class Generatellvm extends GJNoArguDepthFirst<String>{
       f0 -> ClassDeclaration()    |   ClassExtendsDeclaration() */
     public String visit(TypeDeclaration node){
         node.f0.accept(this);
+        this.regs = 0;
         return null;
     }
 
@@ -106,9 +115,6 @@ public class Generatellvm extends GJNoArguDepthFirst<String>{
         // set class name for children to know 
         this.className = node.f1.accept(this);
 
-        /*for (int i = 0; i < node.f3.size(); i++)
-            node.f3.elementAt(i).accept(this);*/
-
         for (int i = 0; i < node.f4.size(); i++)
             node.f4.elementAt(i).accept(this);
         return null;
@@ -121,11 +127,9 @@ public class Generatellvm extends GJNoArguDepthFirst<String>{
         }
     */
     public String visit(ClassExtendsDeclaration node){
+
         // set class name for children to know 
         this.className = node.f1.accept(this);
-       
-        /*for (int i = 0; i < node.f5.size(); i++)
-            node.f5.elementAt(i).accept(this);*/
 
         for (int i = 0; i < node.f6.size(); i++)
             node.f6.elementAt(i).accept(this);
@@ -139,8 +143,9 @@ public class Generatellvm extends GJNoArguDepthFirst<String>{
     public String visit(VarDeclaration node){
     
         // allocate space and store local variable
-        String varType = node.f0.accept(this), id = node.f1.accept(this);
-        emit("\t%" + id + " = alloca " + ClassData.getSize(varType).getValue());
+        String varType = ClassData.getSize(node.f0.accept(this)).getValue(), id = node.f1.accept(this);
+        emit("\t%" + id + " = alloca " + varType);
+        this.scope.add(new Pair("%" + id, varType));
         return null;
     }
 
@@ -170,6 +175,7 @@ public class Generatellvm extends GJNoArguDepthFirst<String>{
                 llvmType = ClassData.getSize(par.getKey()).getValue();
                 emit("\t%" + paramID + " = alloca " + llvmType +
                     "\n\tstore " + llvmType + " %." + paramID + ", " + llvmType + "* %" + paramID);
+                this.scope.add(new Pair("%" + paramID, llvmType));
             } 
         }  
 
@@ -181,8 +187,86 @@ public class Generatellvm extends GJNoArguDepthFirst<String>{
         for (int i = 0; i < node.f8.size(); i++)
             node.f8.elementAt(i).accept(this);
 
-        emit("}");
+        emit("}\n");
+        this.scope.clear();
         return null;
+    }
+
+    /* Statement: f0 -> Block() | AssignmentStatement() | ArrayAssignmentStatement() | IfStatement() | WhileStatement() | PrintStatement() */
+    public String visit(Statement node){
+        node.f0.accept(this);
+        return null;
+    }
+
+    /*  Block: {( Statement() )*} */
+    public String visit(Block node){
+        for (int i = 0; i < node.f1.size(); i++)
+            node.f1.elementAt(i).accept(this);
+        return null;
+    }
+
+    /*  Assignment Statement
+        f0 -> Identifier() = f2 -> Expression();
+    */
+    public String visit(AssignmentStatement node){ 
+        String left = node.f0.accept(this), right = node.f2.accept(this);
+        Pair<String, String> leftInfo = MyUtils.getReg(this.scope, left), rightInfo = MyUtils.getReg(this.scope, right);
+
+        String rightReg = this.nextReg(), rightType, tempReg;
+        Pair<String, Integer> rightField;
+        // if the right side operand is either a parameter or a local variable, load it's content using the (pointer, type) pair returned by MyUtils.getReg 
+        if(rightInfo != null){
+            rightType = rightInfo.getValue();
+            emit("\t" + rightReg + " = load " + rightType + ", " + rightType + "* " +  rightInfo.getKey());
+        }
+        //else it is a field of the current class
+        else{
+            rightField = this.data.get(this.className).vars.get(right);
+            rightType = ClassData.getSize(rightField.getKey()).getValue();
+            emit("\t" + rightReg + " = getelementptr i8, i8* %this, " + rightType + " " + rightField.getValue());
+
+            // cast right side operand pointer to actual size of field 
+            if(!"i8".equals(rightType)){
+                tempReg = rightReg;
+                rightReg = this.nextReg();
+                emit("\t" + rightReg + " = bitcast i8* " + tempReg + " to " + rightType);
+            }
+        }
+
+        String leftReg, leftType;
+        Pair<String, Integer> leftField;
+        // if the left side operand is either a parameter or a local variable, store the result at the address returned by MyUtils.getReg
+        if(leftInfo != null)
+            emit("\tstore " + rightType + " " + rightReg + ", " + rightType + "* " + leftInfo.getKey());
+        // else if it is a field, get it's (type, offset) pair from the lookUpTable built during the 1st pass
+        else{
+            leftField = this.data.get(this.className).vars.get(left);
+            leftReg = this.nextReg();
+            leftType = ClassData.getSize(leftField.getKey()).getValue();
+            emit("\t" + leftReg + " = getelementptr i8, i8* %this, " + leftType + " " + leftField.getValue());
+
+            // cast left side operand pointer to actual size of field 
+            if(!"i8".equals(leftType)){
+                tempReg = leftReg;
+                leftReg = this.nextReg();
+                emit("\t" + leftReg + " = bitcast i8* " + tempReg + " to " + leftType);
+            }
+            emit("\tstore " + rightType + " " + rightReg + ", " + leftType + "* " + leftReg);
+        }
+
+
+
+       
+        return null;
+
+    }
+
+    /*Expression
+    * f0 -> AndExpression() | CompareExpression() | PlusExpression() | MinusExpression() 
+        | TimesExpression() | ArrayLookup() | ArrayLength() | MessageSend() | Clause()
+    */
+    public String visit(Expression node){
+        return node.f0.accept(this);
     }
 
     /* Type: f0 -> ArrayType() | BooleanType() | IntegerType() | Identifier() */

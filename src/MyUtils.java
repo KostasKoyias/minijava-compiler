@@ -59,12 +59,16 @@ public class MyUtils{
             }
             return rv;
         }
-            /*String rv = "(i8* %this";
-            int i = 0;
-            return rv;
-            if(params != null)
-                for(String par : params)
-                    rv += (i++ < params.length ? ", " : "") + ClassData.getSize(param).getValue();
-            return rv + ")*";
-        }*/
+          
+        public static Pair<String, String> getReg(ArrayList<Pair<String, String>> list, String key){
+            String item;
+            if(list != null){
+                for(int i = 0; i < list.size(); i++){
+                    item = list.get(i).getKey();
+                    if(item.equals("%" + key) || item.equals("%." + key))
+                        return list.get(i);
+                }
+            }
+            return null;
+        }
 }

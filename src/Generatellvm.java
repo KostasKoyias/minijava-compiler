@@ -38,6 +38,21 @@ public class Generatellvm extends GJNoArguDepthFirst<String>{
         return llvmType;
     }
 
+    // given an identifier return a pair containing the register that holds the id, and the type of the id
+    private Pair<String, String> getIdInfo(String id){
+        Pair<String, String> info = MyUtils.getReg(this.scope, id);
+        String type;
+
+        // if the right side operand is either a parameter or a local variable, load it's content using the (pointer, type) pair returned by MyUtils.getReg 
+        if(info != null)
+            return info;
+        //else it is a field of the current class
+        else{
+            type = this.getField(id);
+            return new Pair("%_" + (this.regs-1), type);
+        }
+    }
+
     // append a String in the file to be generated
 	protected void emit(String s){
 		try{
@@ -224,16 +239,10 @@ public class Generatellvm extends GJNoArguDepthFirst<String>{
     */
     public String visit(AssignmentStatement node){ 
         String left = node.f0.accept(this), right = node.f2.accept(this), rightReg, rightType;
-        Pair<String, String> leftInfo = MyUtils.getReg(this.scope, left), rightInfo = MyUtils.getReg(this.scope, right);
-
-        // if the right side operand is either a parameter or a local variable, load it's content using the (pointer, type) pair returned by MyUtils.getReg 
-        if(rightInfo != null)
-            rightType = rightInfo.getValue();
-        //else it is a field of the current class
-        else
-            rightType = this.getField(right);
+        Pair<String, String> leftInfo = MyUtils.getReg(this.scope, left), rightInfo = this.getIdInfo(right);
+        rightType = rightInfo.getValue();
         rightReg = this.nextReg();
-        emit("\t" + rightReg + " = load " + rightType + ", " + rightType + "* " +  (rightInfo == null ? "%_" + (this.regs-2) : rightInfo.getKey()));
+        emit("\t" + rightReg + " = load " + rightType + ", " + rightType + "* " +  rightInfo.getKey());
 
         // store the content of the address calculated for the right side, at the address calculated for the left side
         if(leftInfo == null)

@@ -20,8 +20,22 @@ public class Generatellvm extends GJNoArguDepthFirst<String>{
         this.scope = new ArrayList<Pair<String, String>>();
     }  
 
+    // return next register available
     private String nextReg(){
         return "%_" + this.regs++;
+    }
+
+    // given a field of a class, load it from memory and return it's llvm type(e.g i32)
+    private String getField(String field){
+        Pair<String, Integer> fieldInfo = this.data.get(this.className).vars.get(field);
+        String reg = this.nextReg(), llvmType = ClassData.getSize(fieldInfo.getKey()).getValue(); 
+        
+        emit("\t" + reg + " = getelementptr i8, i8* %this, " + llvmType + " " + fieldInfo.getValue());
+
+        // cast left side operand pointer to actual size of field 
+        if(!"i8".equals(llvmType))
+            emit("\t" + this.nextReg() + " = bitcast i8* " + reg + " to " + llvmType + "*");
+        return llvmType;
     }
 
     // append a String in the file to be generated
@@ -101,7 +115,6 @@ public class Generatellvm extends GJNoArguDepthFirst<String>{
       f0 -> ClassDeclaration()    |   ClassExtendsDeclaration() */
     public String visit(TypeDeclaration node){
         node.f0.accept(this);
-        this.regs = 0;
         return null;
     }
 
@@ -162,6 +175,7 @@ public class Generatellvm extends GJNoArguDepthFirst<String>{
         String returnType, id = node.f2.accept(this);
         Pair<Integer, String> type = ClassData.getSize(node.f1.accept(this));
         returnType = (type != null ? type.getValue() : "i8*");
+        this.regs = 0;
 
         // emit method's signature
         ArrayList<Pair<String, String>> parameters = this.data.get(this.className).methods.get(id).arguments;
@@ -209,56 +223,23 @@ public class Generatellvm extends GJNoArguDepthFirst<String>{
         f0 -> Identifier() = f2 -> Expression();
     */
     public String visit(AssignmentStatement node){ 
-        String left = node.f0.accept(this), right = node.f2.accept(this);
+        String left = node.f0.accept(this), right = node.f2.accept(this), rightReg, rightType;
         Pair<String, String> leftInfo = MyUtils.getReg(this.scope, left), rightInfo = MyUtils.getReg(this.scope, right);
 
-        String rightReg = this.nextReg(), rightType, tempReg;
-        Pair<String, Integer> rightField;
         // if the right side operand is either a parameter or a local variable, load it's content using the (pointer, type) pair returned by MyUtils.getReg 
-        if(rightInfo != null){
+        if(rightInfo != null)
             rightType = rightInfo.getValue();
-            emit("\t" + rightReg + " = load " + rightType + ", " + rightType + "* " +  rightInfo.getKey());
-        }
         //else it is a field of the current class
-        else{
-            rightField = this.data.get(this.className).vars.get(right);
-            rightType = ClassData.getSize(rightField.getKey()).getValue();
-            emit("\t" + rightReg + " = getelementptr i8, i8* %this, " + rightType + " " + rightField.getValue());
+        else
+            rightType = this.getField(right);
+        rightReg = this.nextReg();
+        emit("\t" + rightReg + " = load " + rightType + ", " + rightType + "* " +  (rightInfo == null ? "%_" + (this.regs-2) : rightInfo.getKey()));
 
-            // cast right side operand pointer to actual size of field 
-            if(!"i8".equals(rightType)){
-                tempReg = rightReg;
-                rightReg = this.nextReg();
-                emit("\t" + rightReg + " = bitcast i8* " + tempReg + " to " + rightType);
-            }
-        }
-
-        String leftReg, leftType;
-        Pair<String, Integer> leftField;
-        // if the left side operand is either a parameter or a local variable, store the result at the address returned by MyUtils.getReg
-        if(leftInfo != null)
-            emit("\tstore " + rightType + " " + rightReg + ", " + rightType + "* " + leftInfo.getKey());
-        // else if it is a field, get it's (type, offset) pair from the lookUpTable built during the 1st pass
-        else{
-            leftField = this.data.get(this.className).vars.get(left);
-            leftReg = this.nextReg();
-            leftType = ClassData.getSize(leftField.getKey()).getValue();
-            emit("\t" + leftReg + " = getelementptr i8, i8* %this, " + leftType + " " + leftField.getValue());
-
-            // cast left side operand pointer to actual size of field 
-            if(!"i8".equals(leftType)){
-                tempReg = leftReg;
-                leftReg = this.nextReg();
-                emit("\t" + leftReg + " = bitcast i8* " + tempReg + " to " + leftType);
-            }
-            emit("\tstore " + rightType + " " + rightReg + ", " + leftType + "* " + leftReg);
-        }
-
-
-
-       
+        // store the content of the address calculated for the right side, at the address calculated for the left side
+        if(leftInfo == null)
+            this.getField(left);
+        emit("\tstore " + rightType + " " + rightReg + ", " + rightType + "* " + (leftInfo == null ? "%_" + (this.regs-1) : leftInfo.getKey()));
         return null;
-
     }
 
     /*Expression

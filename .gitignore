@@ -2,7 +2,7 @@ old
 build/*.class
 examples
 src/out
-src/Test*
+src/Test.java
 src/.vscode
 src/*.class 
 src/*~ 

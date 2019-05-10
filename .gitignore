@@ -1,6 +1,7 @@
 old
 build/*.class
 examples
+src/out
 src/Test*
 src/.vscode
 src/*.class 

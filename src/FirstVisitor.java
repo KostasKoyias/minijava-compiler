@@ -1,5 +1,6 @@
 import java.util.Map;
 import javafx.util.Pair;
+import java.util.ArrayList;
 import java.util.LinkedHashMap; 
 import visitor.GJDepthFirst;
 import syntaxtree.*;
@@ -7,7 +8,7 @@ import syntaxtree.*;
 public class FirstVisitor extends GJDepthFirst<String, ClassData>{
 
     /* use a map list storing (class_name, meta_data) pairs */
-    public Map <String, ClassData> classes;
+    protected Map <String, ClassData> classes;
     private Integer nextVar, nextMethod;
 
     /* Constructor: initialize the map and the offsets*/ 
@@ -127,14 +128,14 @@ public class FirstVisitor extends GJDepthFirst<String, ClassData>{
         boolean over = parentClassData != null && parentClassData.methods.containsKey(id);
 
         /* get argument types, if they exist */
-        String[] args = null;
+        ArrayList<Pair<String, String>> args = null;
     	if (node.f4.present())
-            args = node.f4.accept(this, null).split(",");
+            args = MyUtils.getParams(node.f4.accept(this, null).split(","));
 
         /* if it does not, store a pointer to it and calculate the exact memory address for the next method to be stored */
-        Triplet<String, Integer, String[]> triplet = new Triplet<String, Integer, String[]>(type, this.nextMethod, args);
+        MethodData method = new MethodData(type, this.nextMethod, args);
         if(!over){
-            data.methods.put(id, triplet);
+            data.methods.put(id, method);
             this.nextMethod += 8;
         }
         return null;
@@ -149,8 +150,8 @@ public class FirstVisitor extends GJDepthFirst<String, ClassData>{
 
     /* FormalParameter f0 -> Type() f1 -> Identifier() Returns just the parameter type as a String*/
     public String visit(FormalParameter node, ClassData data){
-        String type = node.f0.accept(this, null);
-        return type;
+        String type = node.f0.accept(this, null), id = node.f1.accept(this, null);
+        return type + ":" + id;
     }
 
     /* FormalParameterTail f0 -> ( FormalParameterTerm)* */

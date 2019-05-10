@@ -5,4 +5,4 @@ all:
 	#-d ../build
 
 clean:
-	rm -rf *.class *~ *Parse* *Token* *jtb* *CharStream* syntaxtree visitor
+	rm -rf *.class *~ *Parse* *Token* *jtb* *CharStream* syntaxtree visitor *.ll out

@@ -107,7 +107,7 @@ public class FirstVisitor extends GJDepthFirst<String, ClassData>{
         /* if it is not about a variable declared in a method, but in a class, update lookup Table */
         if(data != null){
             data.vars.put(id, pair);
-            this.nextVar += ClassData.sizes.containsKey(type) ? ClassData.sizes.get(type).getKey() : ClassData.pointerSize;
+            this.nextVar += ClassData.getSize(type).getKey();
         }
         return null;
     }

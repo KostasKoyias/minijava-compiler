@@ -14,7 +14,7 @@ public class MyUtils{
             int i = 0;
             if(args != null){
                 for(Pair<String, String> arg : args){
-                    type = ClassData.sizes.get(arg.getKey()).getValue();
+                    type = ClassData.getSize(arg.getKey()).getValue();
                     rv += (i++ < args.size() ? ", " : "") + type + (isDefinition ? " %." + arg.getValue() : ""); 
                 }
             }
@@ -28,7 +28,7 @@ public class MyUtils{
     
             // for each method append: 1.return type and 2.arguments to the String to be returned
             for(Map.Entry<String, MethodData> entry : methods.entrySet()){
-                retType = ClassData.sizes.get(entry.getValue().returnType).getValue();
+                retType = ClassData.getSize(entry.getValue().returnType).getValue();
                 methodName = entry.getKey();
                 rv += "i8* bitcast (" + retType + MyUtils.getArgs(entry.getValue().arguments, false) + " @" + className + "." + methodName + " to i8*)";
                 rv += ++i < methods.size() ? ", " : ""; 
@@ -64,7 +64,7 @@ public class MyUtils{
             return rv;
             if(params != null)
                 for(String par : params)
-                    rv += (i++ < params.length ? ", " : "") + ClassData.sizes.get(param).getValue();
+                    rv += (i++ < params.length ? ", " : "") + ClassData.getSize(param).getValue();
             return rv + ")*";
         }*/
 }

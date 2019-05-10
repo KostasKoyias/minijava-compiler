@@ -82,7 +82,7 @@ public class Generatellvm extends GJNoArguDepthFirst<String>{
 
    		for (int i = 0; i < node.f15.size(); i++)
                node.f15.elementAt(i).accept(this);
-	    emit("call void (i32) @print_int(i32 23)");
+	    emit("\tcall void (i32) @print_int(i32 23)");
         
         
         emit("\tret i32 0\n}");
@@ -106,8 +106,8 @@ public class Generatellvm extends GJNoArguDepthFirst<String>{
         // set class name for children to know 
         this.className = node.f1.accept(this);
 
-        for (int i = 0; i < node.f3.size(); i++)
-            node.f3.elementAt(i).accept(this);
+        /*for (int i = 0; i < node.f3.size(); i++)
+            node.f3.elementAt(i).accept(this);*/
 
         for (int i = 0; i < node.f4.size(); i++)
             node.f4.elementAt(i).accept(this);
@@ -124,11 +124,23 @@ public class Generatellvm extends GJNoArguDepthFirst<String>{
         // set class name for children to know 
         this.className = node.f1.accept(this);
        
-        for (int i = 0; i < node.f5.size(); i++)
-            node.f5.elementAt(i).accept(this);
+        /*for (int i = 0; i < node.f5.size(); i++)
+            node.f5.elementAt(i).accept(this);*/
 
         for (int i = 0; i < node.f6.size(); i++)
             node.f6.elementAt(i).accept(this);
+        return null;
+    }
+
+    /*VarDeclaration
+    * f0 -> Type()
+    * f1 -> Identifier()
+    */
+    public String visit(VarDeclaration node){
+    
+        // allocate space and store local variable
+        String varType = node.f0.accept(this), id = node.f1.accept(this);
+        emit("\t%" + id + " = alloca " + ClassData.getSize(varType).getValue());
         return null;
     }
 
@@ -143,12 +155,23 @@ public class Generatellvm extends GJNoArguDepthFirst<String>{
        
         // get return type of method in the appropriate llvm form
         String returnType, id = node.f2.accept(this);
-        Pair<Integer, String> type = ClassData.sizes.get(node.f1.accept(this));
+        Pair<Integer, String> type = ClassData.getSize(node.f1.accept(this));
         returnType = (type != null ? type.getValue() : "i8*");
 
-        // define method in the .ll file
+        // emit method's signature
         ArrayList<Pair<String, String>> parameters = this.data.get(this.className).methods.get(id).arguments;
-        emit("define " + returnType + " @" + this.className + "." + id + MyUtils.getArgs(parameters, true) + "{");	   
+        emit("define " + returnType + " @" + this.className + "." + id + MyUtils.getArgs(parameters, true) + "{");	  
+        
+        // allocate space and store each parameter of the method
+        String llvmType, paramID;
+        if(parameters != null){
+            for(Pair<String, String> par : parameters){
+                paramID = par.getValue();
+                llvmType = ClassData.getSize(par.getKey()).getValue();
+                emit("\t%" + paramID + " = alloca " + llvmType +
+                    "\n\tstore " + llvmType + " %." + paramID + ", " + llvmType + "* %" + paramID);
+            } 
+        }  
 
         // visit variable declarations
         for (int i = 0; i < node.f7.size(); i++)

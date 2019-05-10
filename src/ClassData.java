@@ -10,7 +10,7 @@ public class ClassData{
     public static final Integer pointerSize = 8;
 
     /* map all mini java data types to their actual size in bytes */
-    public static final Map<String, Pair<Integer,String>> sizes = new LinkedHashMap<String, Pair<Integer,String>>() {
+    private static final Map<String, Pair<Integer,String>> sizes = new LinkedHashMap<String, Pair<Integer,String>>() {
         private static final long serialVersionUID = 1L;
         {
             put("boolean", new Pair(1, "i8"));
@@ -25,6 +25,13 @@ public class ClassData{
         this.methods = new LinkedHashMap<String, MethodData>();
     }
 
+    public static final Pair<Integer, String> getSize(String type){
+        if(ClassData.sizes.containsKey(type))
+            return ClassData.sizes.get(type);
+        else 
+            return new Pair(ClassData.pointerSize, "i8*");
+    }
+
     /* given a variable_name to (type, offset) map, calculate the exact memory address for the next variable to be stored */
     public int getOffsetOfNextVar(){
         int offset = 0;
@@ -33,7 +40,7 @@ public class ClassData{
         /* run through each variable entry and sum up the sizes */
         for(Map.Entry<String, Pair<String, Integer>> var: this.vars.entrySet()){
             type = var.getValue().getKey();
-            offset += ClassData.sizes.containsKey(type) ? ClassData.sizes.get(type).getKey() : ClassData.pointerSize;
+            offset += ClassData.getSize(type).getKey();
         }
         return offset + ClassData.pointerSize;
     }

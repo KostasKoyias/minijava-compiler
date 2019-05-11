@@ -20,7 +20,7 @@ public class Generatellvm extends GJNoArguDepthFirst<String>{
         this.state = new State();
     }
 
-    // return next register available
+    // return next register available, update method's state by associating the identifier to the register, a data-type and a "is pointer" field  
     private String newReg(String llvmType){
         return this.newReg(null, llvmType, false);
     }
@@ -248,9 +248,7 @@ public class Generatellvm extends GJNoArguDepthFirst<String>{
         return null;
     }
 
-    /*  Assignment Statement
-        f0 -> Identifier() = f2 -> Expression();
-    */
+    /*  Assignment Statement:   f0 -> Identifier() = f2 -> Expression(); */
     public String visit(AssignmentStatement node){ 
         String leftID = node.f0.accept(this), rightSide = node.f2.accept(this), leftInfo = this.getIdAddress(leftID);
 
@@ -258,6 +256,14 @@ public class Generatellvm extends GJNoArguDepthFirst<String>{
         emit("\n\t;store result\n\tstore " + rightSide + ", " + leftInfo);
         return null;
     }
+
+    /*fPrint Statement: System.out.println( f2 -> Expression());*/
+	public String visit(PrintStatement node){
+		String expr = node.f2.accept(this);
+		emit("\tcall void (i32) @print_int(" + expr +")");
+		return null;
+
+	}
 
     /*Expression
     * f0 -> AndExpression() | CompareExpression() | PlusExpression() | MinusExpression() 

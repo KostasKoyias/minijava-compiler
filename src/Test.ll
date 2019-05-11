@@ -40,6 +40,7 @@ define i32 @Base.set (i8* %this, i32 %.x){
 
 	;store result
 	store i32 %.x, i32* %_1
+	call void (i32) @print_int(i32 %.x)
 	%_2 = load i32, i32* %_1
 	ret i32 %_2
 }

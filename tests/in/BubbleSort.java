@@ -7,7 +7,7 @@ class BubbleSort{
 
 // This class contains the array of integers and
 // methods to initialize, print and sort the array
-// using Bublesort
+// using Bubblesort
 class BBS{
     
     int[] number ;
@@ -26,7 +26,7 @@ class BBS{
     }
 
  
-    // Sort array of integers using Bublesort method
+    // Sort array of integers using Bubblesort method
     public int Sort(){
 	int nt ;
 	int i ;

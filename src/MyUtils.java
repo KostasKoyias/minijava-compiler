@@ -30,7 +30,7 @@ public class MyUtils{
             for(Map.Entry<String, MethodData> entry : methods.entrySet()){
                 retType = ClassData.getSize(entry.getValue().returnType).getValue();
                 methodName = entry.getKey();
-                rv += "i8* bitcast (" + retType + MyUtils.getArgs(entry.getValue().arguments, false) + " @" + className + "." + methodName + " to i8*)";
+                rv += "i8* bitcast (" + retType + MyUtils.getArgs(entry.getValue().arguments, false) + " @" + entry.getValue().className + "." + methodName + " to i8*)";
                 rv += ++i < methods.size() ? ", " : ""; 
             }
             return rv;
@@ -42,6 +42,7 @@ public class MyUtils{
             Map<String, MethodData> methods;
 
             // for each class, declare a global vTable in the .ll file
+	    obj.emit(";for each class, declare a global vTable containing a pointer for each method");
             for(Map.Entry<String, ClassData> entry : obj.data.entrySet()){
                 className = entry.getKey();
                 methods = entry.getValue().methods;

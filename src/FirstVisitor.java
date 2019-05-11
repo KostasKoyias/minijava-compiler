@@ -10,6 +10,7 @@ public class FirstVisitor extends GJDepthFirst<String, ClassData>{
     /* use a map list storing (class_name, meta_data) pairs */
     protected Map <String, ClassData> classes;
     private Integer nextVar, nextMethod;
+    private String className;
 
     /* Constructor: initialize the map and the offsets*/ 
     public FirstVisitor(){
@@ -49,8 +50,9 @@ public class FirstVisitor extends GJDepthFirst<String, ClassData>{
     }
     */
     public String visit(ClassDeclaration node, ClassData data){
-        String id = node.f1.accept(this, null);
+        String id = node.f1.accept(this, null); 
         ClassData cd = new ClassData(null);
+        this.className = id;
 
         /* pass ClassData to each field */
         for(int i = 0; i < node.f3.size(); i++)
@@ -71,8 +73,8 @@ public class FirstVisitor extends GJDepthFirst<String, ClassData>{
         }
     */
     public String visit(ClassExtendsDeclaration node, ClassData data){
-    	String id = node.f1.accept(this, null);
-    	String parent = node.f3.accept(this, null);
+        String id = node.f1.accept(this, null), parent = node.f3.accept(this, null);
+        this.className = id;
 
         /* Pass a meta data object down to the declarations sections, derived class inherits all fields and methods */ 
         ClassData cd = new ClassData(parent), cdParent = this.classes.get(parent);
@@ -121,23 +123,16 @@ public class FirstVisitor extends GJDepthFirst<String, ClassData>{
     public String visit(MethodDeclaration node, ClassData data){
         String type = node.f1.accept(this, null);
         String id = node.f2.accept(this, null);
-    	
-    	/* check whether the method overrides a super class method */	
-        String parent = data.parentName;
-        ClassData parentClassData = this.classes.get(parent);
-        boolean over = parentClassData != null && parentClassData.methods.containsKey(id);
 
         /* get argument types, if they exist */
         ArrayList<Pair<String, String>> args = null;
     	if (node.f4.present())
             args = MyUtils.getParams(node.f4.accept(this, null).split(","));
 
-        /* if it does not, store a pointer to it and calculate the exact memory address for the next method to be stored */
-        MethodData method = new MethodData(type, this.nextMethod, args);
-        if(!over){
-            data.methods.put(id, method);
-            this.nextMethod += 8;
-        }
+        /* store method, if it already exists, it will be overriden*/
+        MethodData method = new MethodData(this.className, type, this.nextMethod, args);
+        data.methods.put(id, method);
+        this.nextMethod += 8;
         return null;
     }
 

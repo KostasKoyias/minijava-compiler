@@ -45,7 +45,7 @@ class Main {
                         /* For each pointer to a member method, print offset */
                         System.out.println("\n\tMethods\n\t-------\n");
                         for(Map.Entry<String, MethodData> func : entry.getValue().methods.entrySet())
-                            System.out.println("\t\t" + name + "." + func.getKey() + ": " + func.getValue().offset);                       
+                            System.out.println("\t\t" + func.getValue().className + "." + func.getKey() + ": " + func.getValue().offset);                       
                     }  
                     
                 }

@@ -3,35 +3,51 @@ import syntaxtree.*;
 import java.util.LinkedHashMap; 
 import java.util.*;
 
-/* this class holds all information about the identifiers and registers a class uses */
+
+/* this class holds all information about the identifiers a method uses */
 public class State{
-    private Map<String, String> ids;    // a map from id to reg
-    private Map<String, String> regs;   // a map from reg to type
+
+    // nested class Info holding all info needed for a given identifier
+    class Info{
+        String reg;
+        String type;
+        boolean isLocal;
+
+        Info(String reg, String type, boolean isLocal){
+            this.reg = reg; this.type = type; this.isLocal = isLocal;
+        }
+
+        public Info clone(){  
+            return new Info(this.reg, this.type, this.isLocal);  
+        }  
+    }
+    private Map<String, Info> ids; 
 
     State(){
-        this.ids = new LinkedHashMap<String, String>();
-        this.regs = new LinkedHashMap<String, String>();
+        this.ids = new LinkedHashMap<String, Info>();
     }
 
     public void put(String id, String reg, String type){
-        this.ids.put(id, reg);
-        this.regs.put(reg, type);
+        this.put(id, reg, type, true);
     }
 
-    public String getReg(String id){
-        return this.ids.get(id);
+    public void put(String id, String reg, String type, boolean isLocal){
+        Info info = new Info(reg, type, isLocal);
+        this.ids.put(id, info);
     }
 
-    public String getType(String idOrReg){
-        if(this.ids.containsKey(idOrReg))
-            return this.ids.get(idOrReg);
-        else if(this.regs.containsKey(idOrReg))
-            return this.regs.get(idOrReg);
+    public Info getInfo(String id){
+        return this.ids.containsKey(id) ? this.ids.get(id).clone() : null;
+    }
+
+    public String getType(String id){
+        if(this.ids.containsKey(id))
+            return this.ids.get(id).type;
         else 
             return null;
     }
 
     public void clear(){
-        this.ids.clear(); this.regs.clear();
+        this.ids.clear();
     }
 }

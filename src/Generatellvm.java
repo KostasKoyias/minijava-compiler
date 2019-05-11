@@ -18,18 +18,22 @@ public class Generatellvm extends GJNoArguDepthFirst<String>{
         this.data = data;
         this.regCounter = 0;
         this.state = new State();
-    }  
+    }
 
     // return next register available
-    private String nextReg(String llvmType){
-        this.state.put(null, String.valueOf("%_" + this.regCounter), llvmType);
+    private String newReg(String llvmType){
+        return this.newReg(null, llvmType, false);
+    }
+
+    private String newReg(String id, String llvmType, boolean isLocal){
+        this.state.put(id, String.valueOf("%_" + this.regCounter), llvmType, isLocal);
         return "%_" + this.regCounter++;
     }
 
     // given a field of a class, return a register holding either the address or the content of the field
     private String getField(String field, boolean wantContent){
         Pair<String, Integer> fieldInfo = this.data.get(this.className).vars.get(field);
-        String reg = this.nextReg("i8*"), llvmType = ClassData.getSize(fieldInfo.getKey()).getValue(); 
+        String reg = this.newReg(field, "i8*", true), llvmType = ClassData.getSize(fieldInfo.getKey()).getValue(); 
 
         // set a pointer to the field
         emit("\n\t;load " + (wantContent ? "field " : "address of ") + this.className + "." + field + " from memory" 
@@ -37,29 +41,28 @@ public class Generatellvm extends GJNoArguDepthFirst<String>{
 
         // cast field pointer to actual size of field if it it is different than i8
         if(!"i8".equals(llvmType))
-            emit("\t" + this.nextReg(llvmType + "*") + " = bitcast i8* " + reg + " to " + llvmType + "*");
+            emit("\t" + this.newReg(field, llvmType, true) + " = bitcast i8* " + reg + " to " + llvmType + "*");
 
         // if the actual content of the field was requested, load it to a register that will be returned 
         if(wantContent)
-            emit("\t" + this.nextReg(llvmType) + " = load " + llvmType + ", " + llvmType + "* " + ("%_" + (this.regCounter-2)));
+            emit("\t" + this.newReg(field, llvmType, false) + " = load " + llvmType + ", " + llvmType + "* " + ("%_" + (this.regCounter-2)));
         return "%_" + (this.regCounter-1);
     }
 
-    // given an identifier return a pair containing the register that holds the id, and the type of the id
-    private Pair<String, String> getIdInfo(String id, boolean wantContent){
-        String reg = this.state.getReg(id), type = null;
+    // given an identifier return a pair containing the register that holds the address of the id, and the type of the id
+    private String getIdAddress(String id){
+        State.Info info = this.state.getInfo(id);
 
         // if identifier is a field of this class
-        if(reg == null){
-            reg = this.getField(id, wantContent);
-            type = this.state.getType(reg);
+        if(info == null){
+            this.getField(id, false);
+            info = this.state.getInfo(id);
         }
-        // else if it is either a local variable or a parameter to be modified(wantContent), get a register holding the ADDRESS of the identifier
-        else if(!wantContent){
-            type = this.state.getType(reg) + "*";
-            reg = reg.replace("%.", "%");
-        }
-        return new Pair(reg, type);
+        // else this identifier is already stored, get a register holding the ADDRESS of the identifier
+        else if(!info.isLocal)
+                info.reg = info.reg.replace("%.", "%");
+        info.type += "*";
+        return info.type + " " + info.reg;
     }
 
     // append a String in the file to be generated
@@ -185,7 +188,7 @@ public class Generatellvm extends GJNoArguDepthFirst<String>{
         // allocate space and store local variable
         String varType = ClassData.getSize(node.f0.accept(this)).getValue(), id = node.f1.accept(this);
         emit("\n\t;allocate space for local variable %" + id + "\n\t%" + id + " = alloca " + varType);
-        this.state.put(id, "%." + id, varType);
+        this.state.put(id, "%" + id, varType, true);
         return null;
     }
 
@@ -215,7 +218,7 @@ public class Generatellvm extends GJNoArguDepthFirst<String>{
                 llvmType = ClassData.getSize(par.getKey()).getValue();
                 emit("\t%" + paramID + " = alloca " + llvmType +
                      "\n\tstore " + llvmType + " %." + paramID + ", " + llvmType + "* %" + paramID);
-                this.state.put(paramID, "%." + paramID, llvmType);
+                this.state.put(paramID, "%." + paramID, llvmType, false);
             } 
         }  
 
@@ -227,8 +230,7 @@ public class Generatellvm extends GJNoArguDepthFirst<String>{
         for (int i = 0; i < node.f8.size(); i++)
             node.f8.elementAt(i).accept(this);
 
-        emit("\tret i32 0\n}\n");        
-        //emit("}\n");
+        emit("\tret " + node.f10.accept(this) + "\n}\n");        
         this.state.clear();
         return null;
     }
@@ -250,12 +252,10 @@ public class Generatellvm extends GJNoArguDepthFirst<String>{
         f0 -> Identifier() = f2 -> Expression();
     */
     public String visit(AssignmentStatement node){ 
-        String leftID = node.f0.accept(this), rightSide = node.f2.accept(this), type;
-        Pair<String, String> leftInfo = this.getIdInfo(leftID, false);
+        String leftID = node.f0.accept(this), rightSide = node.f2.accept(this), leftInfo = this.getIdAddress(leftID);
 
         // store the content of the address calculated for the right side, at the address calculated for the left side
-        type = leftInfo.getValue();
-        emit("\tstore " + rightSide + ", " + type + " " + leftInfo.getKey());
+        emit("\n\t;store result\n\tstore " + rightSide + ", " + leftInfo);
         return null;
     }
 
@@ -267,6 +267,45 @@ public class Generatellvm extends GJNoArguDepthFirst<String>{
         return node.f0.accept(this);
     }
 
+
+    /*AndExpression f0 -> Clause() &&  f2 -> Clause() */
+    /*public String visit(AndExpression node){
+        String leftType = node.f0.accept(this), rightType = node.f2.accept(this);
+        return "we will see";
+    }*/
+
+    /* Arithmetic Expression Generic Function */
+    public String arithmeticExpression(String left, String right, String op){
+        String[] rightInfo = right.split(" ");
+        emit("\n\t;apply arithmetic expression\n"
+           + "\t" + this.newReg(rightInfo[0]) + " = " + op + " " + left + ", " + rightInfo[1]); 
+        return rightInfo[0] + " %_" + (this.regCounter-1);
+    }
+
+    /*CompareExpression
+    * f0 -> PrimaryExpression() < f2 -> PrimaryExpression() */
+    public String visit(CompareExpression node){
+        return arithmeticExpression(node.f0.accept(this), node.f2.accept(this), "icmp slt");
+    }
+
+    /*PlusExpression
+    * f0 -> PrimaryExpression() + f2 -> PrimaryExpression() */
+    public String visit(PlusExpression node){
+        return arithmeticExpression(node.f0.accept(this), node.f2.accept(this), "add");
+    }
+
+    /*MinusExpression
+    * f0 -> PrimaryExpression() - f2 -> PrimaryExpression() */
+    public String visit(MinusExpression node){
+        return arithmeticExpression(node.f0.accept(this), node.f2.accept(this), "sub");
+    }
+
+    /*TimesExpression
+    * f0 -> PrimaryExpression() * f2 -> PrimaryExpression() */
+    public String visit(TimesExpression node){
+        return arithmeticExpression(node.f0.accept(this), node.f2.accept(this), "mul");
+    }
+
     /*Clause: f0 -> NotExpression() | PrimaryExpression() */
     public String visit(Clause node){
         return node.f0.accept(this);	
@@ -276,16 +315,28 @@ public class Generatellvm extends GJNoArguDepthFirst<String>{
     * f0 -> IntegerLiteral() | TrueLiteral() | FalseLiteral() | Identifier() 
     | ThisExpression() | ArrayAllocationExpression() | AllocationExpression() | BracketExpression() */
     public String visit(PrimaryExpression node){
-        String child = node.f0.accept(this), reg = null, type = null;
+        String child = node.f0.accept(this);
+        State.Info id;
 
-        // in case of an identifier, it might be a (local variable or parameter) or a field of this class, return a register holding the CONTENT of the id
-        if (node.f0.which == 3){
-            reg = this.state.getReg(child);
-            if(reg == null)
-                reg = this.getField(child, true);
-            type = this.state.getType(reg);
-            return type + " " + reg;
+        // in case of an identifier, return a register holding the CONTENT of the id
+        if (node.f0.which == 3 ){
+            id = this.state.getInfo(child);
+
+            // if it is a field, load it to a register and return type and register after if statement
+            if(id == null){
+                this.getField(child, true);
+                id = this.state.getInfo(child);
+            }
+            // else if it is al local variable, there has been a previous allocation/store, so load the content and return 
+            else if(id.isLocal){
+                emit("\t" + this.newReg(id.type) + " = load " + id.type + ", " + id.type + "* " + id.reg);
+                return id.type + " %_" + (this.regCounter-1);
+            }
+
+            // else it is a parameter, so return it as it is, no need to load
+            return id.type + " " + id.reg;
         }
+
         // else return type and value all in one
         return child;
     }
@@ -337,4 +388,18 @@ public class Generatellvm extends GJNoArguDepthFirst<String>{
     public String visit(Identifier node){
         return node.f0.toString();
     }
+
+    /*NotExpression
+    * f1 -> Clause() */
+    public String visit(NotExpression node){
+        String clause = node.f1.accept(this);
+        emit("\n\t;apply logical not, using xor\n\t" + this.newReg("i1") + " = xor " + clause + ", 1");
+        return "i1 %_" + (this.regCounter-1);
+    }
+
+    /*BracketExpression
+    * ( f1 -> Expression() )*/
+    public String visit(BracketExpression node){
+        return node.f1.accept(this);
+    }    
 }

@@ -37,13 +37,21 @@ define i32 @Base.set (i8* %this, i32 %.x){
 	;load address of Base.data from memory
 	%_0 = getelementptr i8, i8* %this, i32 10
 	%_1 = bitcast i8* %_0 to i32*
+
+	;store result
 	store i32 %.x, i32* %_1
-	ret i32 0
+	%_2 = load i32, i32* %_1
+	ret i32 %_2
 }
 
 ;Base.get
 define i32 @Base.get (i8* %this){
-	ret i32 0
+
+	;load field Base.data from memory
+	%_0 = getelementptr i8, i8* %this, i32 10
+	%_1 = bitcast i8* %_0 to i32*
+	%_2 = load i32, i32* %_1
+	ret i32 %_2
 }
 
 ;Derived.set
@@ -56,8 +64,13 @@ define i32 @Derived.set (i8* %this, i32 %.x){
 	%_0 = getelementptr i8, i8* %this, i32 10
 	%_1 = bitcast i8* %_0 to i32*
 	%_2 = load i32, i32* %_1
-	store i32 %_2, i32* %x
-	ret i32 0
+
+	;apply arithmetic expression
+	%_3 = add i32 %_2, %.x
+
+	;store result
+	store i32 %_3, i32* %x
+	ret i32 %.x
 }
 
 ;Derived.myMethod
@@ -70,7 +83,20 @@ define i1 @Derived.myMethod (i8* %this, i1 %.y, i8* %.k){
 
 	;allocate space for local variable %bl
 	%bl = alloca i1
-	store i1 %.y, i1* %bl
-	ret i1 1
+
+	;apply logical not, using xor
+	%_0 = xor i1 %.y, 1
+
+	;store result
+	store i1 %_0, i1* %bl
+	%_1 = load i1, i1* %bl
+
+	;load address of Derived.varA from memory
+	%_2 = getelementptr i8, i8* %this, i1 8
+	%_3 = bitcast i8* %_2 to i1*
+
+	;store result
+	store i1 %_1, i1* %_3
+	ret i1 %.y
 }
 

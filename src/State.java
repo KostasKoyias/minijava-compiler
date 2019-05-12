@@ -45,8 +45,13 @@ public class State{
         return "%_" + this.regCounter++;
     }
 
+    public String newReg(String llvmType, boolean isLocal){
+        return this.newReg(null, llvmType, isLocal);
+    }
+
     public String newReg(String id, String llvmType, boolean isLocal){
-        this.put(id, String.valueOf("%_" + this.regCounter), llvmType, isLocal);
+	String regCurr = String.valueOf("%_" + this.regCounter), identifier = id == null ? regCurr : id;
+        this.put(identifier, regCurr, llvmType, isLocal);
         return this.newReg();
     }
 

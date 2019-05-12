@@ -78,24 +78,26 @@ define i32 @Derived.set (i8* %this, i32 %.x){
 define i1 @Derived.myMethod (i8* %this){
 
 	;allocate space for local variable %r
-	%r = alloca i32
+	%r = alloca i8*
 
-	;load field Derived.myVar from memory
-	%_0 = getelementptr i8, i8* %this, i32 14
-	%_1 = bitcast i8* %_0 to i8**
-	%_2 = load i8*, i8** %_1
+	;load field Derived.data from memory
+	%_0 = getelementptr i8, i8* %this, i32 10
+	%_1 = bitcast i8* %_0 to i32*
+	%_2 = load i32, i32* %_1
 
-	;lookup *(%_2 + 6)
-	%_3 = bitcast i8* %_2 to i32*
-	%_4 = getelementptr i32, i32* %_3, i32 6
-	%_5 = load i32, i32* %_4
+	;new array of size %_2 + 1 place to store size at, space allocation
+	%_3 = add i32 %_2, 1
+	%_4 = call i8* @calloc(i32 1, i32 %_3)
+	%_5 = bitcast i8* %_4 to i32*
+
+	;store size at index 0
+	store i32 %_2, i32* %_5
+
+	;adjust pointer type of left operand
+	%_6 = bitcast i8** %r to i32**
 
 	;store result
-	store i32 %_5, i32* %r
-	%_6 = load i32, i32* %r
-
-	;apply arithmetic expression
-	%_7 = icmp slt i32 %_6, 2
-	ret i1 %_7
+	store i32* %_5, i32** %_6
+	ret i1 0
 }
 

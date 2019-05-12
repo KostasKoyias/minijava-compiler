@@ -237,10 +237,22 @@ public class Generatellvm extends GJNoArguDepthFirst<String>{
 
     /*  Assignment Statement:   f0 -> Identifier() = f2 -> Expression(); */
     public String visit(AssignmentStatement node){ 
-        String leftID = node.f0.accept(this), rightSide = node.f2.accept(this), leftInfo = this.getIdAddress(leftID);
+        String leftID = node.f0.accept(this), rightSide = node.f2.accept(this), leftType, leftReg, rightType;
+        String[] leftInfo;
+        leftInfo = this.getIdAddress(leftID).split(" "); 
+        leftType = leftInfo[0]; leftReg = leftInfo[1];
+        rightType = rightSide.split(" ")[0];
+
+        // if types do not match, cast left operand to the appropriate pointer type
+        if(leftType.equals(rightType + "*") == false){
+            emit("\n\t;adjust pointer type of left operand\n\t" 
+                 + this.state.newReg() + " = bitcast " + leftType + " " + leftReg + " to " + rightType + "*");
+            leftType = rightType + "*";            
+            leftReg = "%_" + (this.state.getRegCounter()-1);
+        }
 
         // store the content of the address calculated for the right side, at the address calculated for the left side
-        emit("\n\t;store result\n\tstore " + rightSide + ", " + leftInfo);
+        emit("\n\t;store result\n\tstore " + rightSide + ", " + leftType + " " + leftReg);
         return null;
     }
 
@@ -393,6 +405,23 @@ public class Generatellvm extends GJNoArguDepthFirst<String>{
     * f0 -> <IDENTIFIER>*/
     public String visit(Identifier node){
         return node.f0.toString();
+    }
+
+    /*ArrayAllocationExpression:    new integer [f3 -> Expression()] */
+    public String visit(ArrayAllocationExpression node){
+        String size = node.f3.accept(this).split(" ")[1];
+        emit("\n\t;new array of size " + size + " + 1 place to store size at, space allocation\n\t" 
+            + this.state.newReg() + " = add i32 " + size + ", 1\n"
+            +"\t" + this.state.newReg() + " = call i8* @calloc(i32 1, i32 %_" + (this.state.getRegCounter()-2) + ")\n" 
+            +"\t" + this.state.newReg() + " = bitcast i8* %_" + (this.state.getRegCounter()-2) + " to i32*\n"
+            +"\n\t;store size at index 0\n\tstore i32 " + size + ", i32* %_" + (this.state.getRegCounter()-1));      
+        return "i32* %_" + (this.state.getRegCounter()-1);
+    }
+
+    /*AllocationExpresion:  new f1 -> Identifier()() */
+    public String visit(AllocationExpression node){
+        String className = node.f1.accept(this);
+        return className;
     }
 
     /*NotExpression

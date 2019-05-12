@@ -24,6 +24,38 @@ define void @throw_oob() {
 }
 
 define i32 @main() {
+
+	;allocate space for local variable %r
+	%r = alloca i8*
+
+	;allocate space for new array of size 2 + 1 place to store size at
+	%_0 = add i32 2, 1
+	%_1 = call i8* @calloc(i32 1, i32 %_0)
+	%_2 = bitcast i8* %_1 to i32*
+
+	;store size at index 0
+	store i32 2, i32* %_2
+
+	;adjust pointer type of left operand
+	%_3 = bitcast i8** %r to i32**
+
+	;store result
+	store i32* %_2, i32** %_3
+
+	;assign a value to the array element
+	%_4 = load i8*, i8** %r
+	%_5 = bitcast i8* %_4 to i32*
+	%_6 = getelementptr i32, i32* %_5 , i32 2
+	store i32 108, i32* %_6
+
+	;loading local variable
+	%_7 = load i8*, i8** %r
+
+	;lookup *(%_7 + 1)
+	%_8 = bitcast i8* %_7 to i32*
+	%_9 = getelementptr i32, i32* %_8, i32 2
+	%_10 = load i32, i32* %_9
+	call void (i32) @print_int(i32 %_10)
 	call void (i32) @print_int(i32 23)
 	ret i32 0
 }
@@ -35,14 +67,16 @@ define i32 @Base.set (i8* %this, i32 %.x){
 	store i32 %.x, i32* %x
 
 	;load address of Base.data from memory
-	%_0 = getelementptr i8, i8* %this, i32 10
-	%_1 = bitcast i8* %_0 to i32*
+	%_11 = getelementptr i8, i8* %this, i32 10
+	%_12 = bitcast i8* %_11 to i32*
 
 	;store result
-	store i32 %.x, i32* %_1
+	store i32 %.x, i32* %_12
 	call void (i32) @print_int(i32 %.x)
-	%_2 = load i32, i32* %_1
-	ret i32 %_2
+
+	;loading local variable
+	%_13 = load i32, i32* %_12
+	ret i32 %_13
 }
 
 ;Base.get
@@ -76,28 +110,6 @@ define i32 @Derived.set (i8* %this, i32 %.x){
 
 ;Derived.myMethod
 define i1 @Derived.myMethod (i8* %this){
-
-	;allocate space for local variable %r
-	%r = alloca i8*
-
-	;load field Derived.data from memory
-	%_0 = getelementptr i8, i8* %this, i32 10
-	%_1 = bitcast i8* %_0 to i32*
-	%_2 = load i32, i32* %_1
-
-	;new array of size %_2 + 1 place to store size at, space allocation
-	%_3 = add i32 %_2, 1
-	%_4 = call i8* @calloc(i32 1, i32 %_3)
-	%_5 = bitcast i8* %_4 to i32*
-
-	;store size at index 0
-	store i32 %_2, i32* %_5
-
-	;adjust pointer type of left operand
-	%_6 = bitcast i8** %r to i32**
-
-	;store result
-	store i32* %_5, i32** %_6
 	ret i1 0
 }
 

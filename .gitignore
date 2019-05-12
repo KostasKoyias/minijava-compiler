@@ -3,7 +3,8 @@ build/*.class
 examples
 src/out
 src/Test.java
-src/.vscode
+*.vscode
+tests/out/*.ll
 src/*.class 
 src/*~ 
 src/*Parse* 

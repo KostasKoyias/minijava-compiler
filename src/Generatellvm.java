@@ -18,6 +18,19 @@ public class Generatellvm extends GJNoArguDepthFirst<String>{
         this.state = new State();
     }
 
+    // given a register or an integer add 1 to it because 1st place of an array is reserved for the length to be stored at, return the result
+    private String getArrayIndex(String index){
+
+        // if a register was passed, add 1 to the it and store the result in a register who will be returned
+        if(index.startsWith("%_")){
+            emit("\n\t" + this.state.newReg() + " = add i32 " + index + ", 1\n");
+            return "%_" + (this.state.getRegCounter()-1);
+        }
+
+        // else index is a number, just add 1 to it and return the result
+        return String.valueOf(Integer.parseInt(index) + 1);
+    }
+
     // given a field of a class, return a register holding either the address or the content of the field
     private String getField(String field, boolean wantContent){
         Pair<String, Integer> fieldInfo = this.data.get(this.className).vars.get(field);
@@ -237,11 +250,9 @@ public class Generatellvm extends GJNoArguDepthFirst<String>{
 
     /*  Assignment Statement:   f0 -> Identifier() = f2 -> Expression(); */
     public String visit(AssignmentStatement node){ 
-        String leftID = node.f0.accept(this), rightSide = node.f2.accept(this), leftType, leftReg, rightType;
-        String[] leftInfo;
-        leftInfo = this.getIdAddress(leftID).split(" "); 
+        String leftID = node.f0.accept(this), rightSide = node.f2.accept(this), leftType, leftReg, rightType = rightSide.split(" ")[0];
+        String[] leftInfo = this.getIdAddress(leftID).split(" "); 
         leftType = leftInfo[0]; leftReg = leftInfo[1];
-        rightType = rightSide.split(" ")[0];
 
         // if types do not match, cast left operand to the appropriate pointer type
         if(leftType.equals(rightType + "*") == false){
@@ -256,7 +267,22 @@ public class Generatellvm extends GJNoArguDepthFirst<String>{
         return null;
     }
 
-    /*fPrint Statement: System.out.println( f2 -> Expression());*/
+    /*  ArrayAssignmentStatement:   f0 -> Identifier() [f2 -> Expression()] = f5 -> Expression(); */
+    public String visit(ArrayAssignmentStatement node){
+        String leftID = node.f0.accept(this), leftInfo = this.getIdAddress(leftID),
+               index = node.f2.accept(this).split(" ")[1], rightSide = node.f5.accept(this), offset; 
+
+
+
+        // load a pointer to the array, cast it to integer pointer, get it to point at the index-th element and modify it
+        emit("\n\t;assign a value to the array element\n\t" + this.state.newReg() + " = load i8*, " + leftInfo + "\n\t"
+            + this.state.newReg() + " = bitcast i8* %_" + (this.state.getRegCounter()-2) + " to i32*\n\t"
+            + this.state.newReg() + " = getelementptr i32, i32* %_" + (this.state.getRegCounter()-2) + " , i32 " + this.getArrayIndex(index)
+            + "\n\tstore " + rightSide +", i32* %_" + (this.state.getRegCounter()-1));
+        return null;
+    }
+
+    /*Print Statement: System.out.println( f2 -> Expression());*/
 	public String visit(PrintStatement node){
 		String expr = node.f2.accept(this);
 		emit("\tcall void (i32) @print_int(" + expr +")");
@@ -275,9 +301,10 @@ public class Generatellvm extends GJNoArguDepthFirst<String>{
     /*ArrayLookup:  f0 -> PrimaryExpression() [f2 -> PrimaryExpression()] */
     public String visit(ArrayLookup node){
         String id = node.f0.accept(this), index = node.f2.accept(this).split(" ")[1];
+
         emit("\n\t;lookup *(" + id.split(" ")[1] + " + " + index + ")\n"  
             +"\t" + this.state.newReg() + " = bitcast " + id + " to i32*\n"
-            +"\t" + this.state.newReg() + " = getelementptr i32, i32* %_" + (this.state.getRegCounter()-2) + ", i32 " + index 
+            +"\t" + this.state.newReg() + " = getelementptr i32, i32* %_" + (this.state.getRegCounter()-2) + ", i32 " + this.getArrayIndex(index)
             +"\n\t" + this.state.newReg() + " = load i32, i32* %_" + (this.state.getRegCounter()-2));    
         return "i32 %_" + (this.state.getRegCounter()-1);
     }
@@ -347,7 +374,7 @@ public class Generatellvm extends GJNoArguDepthFirst<String>{
             }
             // else if it is al local variable, there has been a previous allocation/store, so load the content and return 
             else if(id.isLocal){
-                emit("\t" + this.state.newReg() + " = load " + id.type + ", " + id.type + "* " + id.reg);
+                emit("\n\t;loading local variable\n\t" + this.state.newReg() + " = load " + id.type + ", " + id.type + "* " + id.reg);
                 return id.type + " %_" + (this.state.getRegCounter()-1);
             }
 
@@ -410,7 +437,7 @@ public class Generatellvm extends GJNoArguDepthFirst<String>{
     /*ArrayAllocationExpression:    new integer [f3 -> Expression()] */
     public String visit(ArrayAllocationExpression node){
         String size = node.f3.accept(this).split(" ")[1];
-        emit("\n\t;new array of size " + size + " + 1 place to store size at, space allocation\n\t" 
+        emit("\n\t;allocate space for new array of size " + size + " + 1 place to store size at\n\t" 
             + this.state.newReg() + " = add i32 " + size + ", 1\n"
             +"\t" + this.state.newReg() + " = call i8* @calloc(i32 1, i32 %_" + (this.state.getRegCounter()-2) + ")\n" 
             +"\t" + this.state.newReg() + " = bitcast i8* %_" + (this.state.getRegCounter()-2) + " to i32*\n"

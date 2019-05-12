@@ -25,7 +25,7 @@ public class Generatellvm extends GJNoArguDepthFirst<String>{
 
         // set a pointer to the field
         emit("\n\t;load " + (wantContent ? "field " : "address of ") + this.className + "." + field + " from memory" 
-            + "\n\t" + reg + " = getelementptr i8, i8* %this, " + llvmType + " " + fieldInfo.getValue());
+            + "\n\t" + reg + " = getelementptr i8, i8* %this, i32 " + fieldInfo.getValue());
 
         // cast field pointer to actual size of field if it it is different than i8
         if(!"i8".equals(llvmType))
@@ -258,6 +258,21 @@ public class Generatellvm extends GJNoArguDepthFirst<String>{
     */
     public String visit(Expression node){
         return node.f0.accept(this);
+    }
+
+    /*ArrayLookup:  f0 -> PrimaryExpression() [f2 -> PrimaryExpression()] */
+    public String visit(ArrayLookup node){
+        String id = node.f0.accept(this), index = node.f2.accept(this).split(" ")[1];
+        emit("\n\t;lookup *(" + id.split(" ")[1] + " + " + index + ")\n"  
+            +"\t" + this.state.newReg() + " = bitcast " + id + " to i32*\n"
+            +"\t" + this.state.newReg() + " = getelementptr i32, i32* %_" + (this.state.getRegCounter()-2) + ", i32 " + index 
+            +"\n\t" + this.state.newReg() + " = load i32, i32* %_" + (this.state.getRegCounter()-2));    
+        return "i32 %_" + (this.state.getRegCounter()-1);
+    }
+
+    /*ArrayLength:  f0 -> PrimaryExpression().length */
+    public String visit(ArrayLength node){
+        return "later";
     }
 
     /* Arithmetic Expression Generic Function */

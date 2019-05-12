@@ -1,6 +1,6 @@
 ;for each class, declare a global vTable containing a pointer for each method
 @.Base_vtable = global [2 x i8*] [i8* bitcast (i32 (i8*, i32)* @Base.set to i8*), i8* bitcast (i32 (i8*)* @Base.get to i8*)]
-@.Derived_vtable = global [3 x i8*] [i8* bitcast (i32 (i8*, i32)* @Derived.set to i8*), i8* bitcast (i32 (i8*)* @Base.get to i8*), i8* bitcast (i1 (i8*, i8*)* @Derived.myMethod to i8*)]
+@.Derived_vtable = global [3 x i8*] [i8* bitcast (i32 (i8*, i32)* @Derived.set to i8*), i8* bitcast (i32 (i8*)* @Base.get to i8*), i8* bitcast (i1 (i8*)* @Derived.myMethod to i8*)]
 
 ;declare functions to be used
 declare i8* @calloc(i32, i32)
@@ -75,28 +75,27 @@ define i32 @Derived.set (i8* %this, i32 %.x){
 }
 
 ;Derived.myMethod
-define i1 @Derived.myMethod (i8* %this, i8* %.k){
-	;allocate space and store each parameter of the method
-	%k = alloca i8*
-	store i8* %.k, i8** %k
+define i1 @Derived.myMethod (i8* %this){
 
 	;allocate space for local variable %r
 	%r = alloca i32
 
-	;load field Derived.data from memory
-	%_0 = getelementptr i8, i8* %this, i32 10
-	%_1 = bitcast i8* %_0 to i32*
-	%_2 = load i32, i32* %_1
+	;load field Derived.myVar from memory
+	%_0 = getelementptr i8, i8* %this, i32 14
+	%_1 = bitcast i8* %_0 to i8**
+	%_2 = load i8*, i8** %_1
 
-	;apply arithmetic expression
-	%_3 = add i32 %_2, 2
+	;lookup *(%_2 + 6)
+	%_3 = bitcast i8* %_2 to i32*
+	%_4 = getelementptr i32, i32* %_3, i32 6
+	%_5 = load i32, i32* %_4
 
 	;store result
-	store i32 %_3, i32* %r
-	%_4 = load i32, i32* %r
+	store i32 %_5, i32* %r
+	%_6 = load i32, i32* %r
 
 	;apply arithmetic expression
-	%_5 = icmp slt i32 %_4, 2
-	ret i1 %_5
+	%_7 = icmp slt i32 %_6, 2
+	ret i1 %_7
 }
 

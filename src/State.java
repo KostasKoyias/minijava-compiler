@@ -7,8 +7,8 @@ import java.util.*;
 /* this class holds all information about the identifiers a method uses */
 public class State{
     private Map<String, Info> ids; 
-    int regCounter;
-    Statement[] statements;
+    private int regCounter;
+    private Statement[] statements;
 
     class Statement{
         int counter;

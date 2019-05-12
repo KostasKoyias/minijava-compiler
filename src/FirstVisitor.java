@@ -62,6 +62,7 @@ public class FirstVisitor extends GJDepthFirst<String, ClassData>{
         for(int i = 0; i < node.f4.size(); i++)
             node.f4.elementAt(i).accept(this, cd);
         
+        cd.setSize();
         this.classes.put(id, cd);
         return null;
     }
@@ -91,6 +92,7 @@ public class FirstVisitor extends GJDepthFirst<String, ClassData>{
     	for (int i = 0; i < node.f6.size(); i++)
             node.f6.elementAt(i).accept(this, cd);
 
+        cd.setSize();
         this.classes.put(id, cd);
     	return null;
     }

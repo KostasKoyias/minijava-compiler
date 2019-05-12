@@ -286,7 +286,7 @@ public class Generatellvm extends GJNoArguDepthFirst<String>{
     */
     public String visit(IfStatement node){
 
-        // get a set of labels and load the if condition to a register
+        // get a set of if labels and load the if condition to a register
         String[] ifLabel = this.state.newLabel("if");
         String condition = node.f2.accept(this), brEnd = "\tbr label %" + ifLabel[2] + "\n\n";
 
@@ -304,7 +304,7 @@ public class Generatellvm extends GJNoArguDepthFirst<String>{
     */
     public String visit(WhileStatement node){
         
-        // get a set of labels and load the if condition to a register
+        // get a set of while labels and load
         String[] whileLabel = this.state.newLabel("while");
         String condition;
 
@@ -481,8 +481,15 @@ public class Generatellvm extends GJNoArguDepthFirst<String>{
 
     /*AllocationExpresion:  new f1 -> Identifier()() */
     public String visit(AllocationExpression node){
-        String className = node.f1.accept(this);
-        return "todo " + className;
+        String className = node.f1.accept(this), tableSize;
+        ClassData data = this.data.get(className);
+        tableSize = "[" + data.methods.size() + " x i8*]";
+
+        emit("\n\t;allocate space for a new \"" + className + "\" object\n\t" + this.state.newReg() + " = call i8* @calloc(i32 1, i32 " + data.size + ")"
+            +"\n\t" + this.state.newReg() + " = bitcast i8* %_" + (this.state.getRegCounter()-2) + " to i8***\n"
+            +"\t" + this.state.newReg() + " = getelementptr " + tableSize + ", " + tableSize + "* @." + className + "_vtable, i32 0, i32 0\n"
+            +"\tstore i8** %_" + (this.state.getRegCounter()-1) + ", i8*** %_" + (this.state.getRegCounter()-2));
+        return "i8* %_" + (this.state.getRegCounter()-3);
     }
 
     /*NotExpression:    f1 -> Clause() */

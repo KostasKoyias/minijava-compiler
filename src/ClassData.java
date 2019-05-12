@@ -5,6 +5,7 @@ import java.util.LinkedHashMap;
 /* for each class, store some meta data */
 public class ClassData{
     String parentName;
+    int size;
     Map <String, Pair<String, Integer>> vars;       // records of form: (variable_name, (type, offset))
     Map <String, MethodData> methods;    // records of form: (function_name, (return_type, offset, argTypes))
     public static final Integer pointerSize = 8;
@@ -30,6 +31,15 @@ public class ClassData{
             return ClassData.sizes.get(type);
         else 
             return new Pair(ClassData.pointerSize, "i8*");
+    }
+
+    public void setSize(){
+        int size = 0;
+        if(this.vars.size() > 0){
+            for(Map.Entry<String, Pair<String, Integer>> entry : this.vars.entrySet())
+                size += ClassData.sizes.get(entry.getValue().getKey()).getKey();
+        }
+        this.size = size + ClassData.pointerSize;
     }
 
     /* given a variable_name to (type, offset) map, calculate the exact memory address for the next variable to be stored */

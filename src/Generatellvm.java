@@ -269,13 +269,10 @@ public class Generatellvm extends GJNoArguDepthFirst<String>{
 
     /*  ArrayAssignmentStatement:   f0 -> Identifier() [f2 -> Expression()] = f5 -> Expression(); */
     public String visit(ArrayAssignmentStatement node){
-        String leftID = node.f0.accept(this), leftInfo = this.getIdAddress(leftID),
-               index = node.f2.accept(this).split(" ")[1], rightSide = node.f5.accept(this), offset; 
-
-
+        String leftID = node.f0.accept(this), leftInfo = this.getIdAddress(leftID), index = node.f2.accept(this).split(" ")[1], rightSide = node.f5.accept(this); 
 
         // load a pointer to the array, cast it to integer pointer, get it to point at the index-th element and modify it
-        emit("\n\t;assign a value to the array element\n\t" + this.state.newReg() + " = load i8*, " + leftInfo + "\n\t"
+        emit("\n\t;assign a value to the array element\n\t" + this.state.newReg(leftID, "i8*", false) + " = load i8*, " + leftInfo + "\n\t"
             + this.state.newReg() + " = bitcast i8* %_" + (this.state.getRegCounter()-2) + " to i32*\n\t"
             + this.state.newReg() + " = getelementptr i32, i32* %_" + (this.state.getRegCounter()-2) + " , i32 " + this.getArrayIndex(index)
             + "\n\tstore " + rightSide +", i32* %_" + (this.state.getRegCounter()-1));
@@ -378,7 +375,7 @@ public class Generatellvm extends GJNoArguDepthFirst<String>{
                 return id.type + " %_" + (this.state.getRegCounter()-1);
             }
 
-            // else it is a parameter, so return it as it is, no need to load
+            // else it is a parameter or an already loaded variable, so return it as it is, no need to load
             return id.type + " " + id.reg;
         }
 
@@ -404,35 +401,30 @@ public class Generatellvm extends GJNoArguDepthFirst<String>{
         return "integer";
     }
 
-    /*IntegerLiteral
-    * f0 -> <INTEGER_LITERAL> */
+    /*Identifier:   f0 -> <IDENTIFIER>*/
+    public String visit(Identifier node){
+        return node.f0.toString();
+    }
+
+    /*IntegerLiteral:   f0 -> <INTEGER_LITERAL> */
     public String visit(IntegerLiteral node){
         return "i32 " + node.f0;
     }
 
-    /*TrueLiteral
-    * f0 -> "true" */
+    /*TrueLiteral:  f0 -> "true" */
     public String visit(TrueLiteral node){
         return "i1 1";
     }
 
-    /*FalseLiteral
-    * f0 -> "false" */
+    /*FalseLiteral: f0 -> "false" */
     public String visit(FalseLiteral node){
         return "i1 0";
     }
 
-    /*ThisExpression
-    * f0 -> "this" */ 
+    /*ThisExpression:   f0 -> "this" */ 
     public String visit(ThisExpression node){  
         return "%this";
     }    
-
-    /*Identifier
-    * f0 -> <IDENTIFIER>*/
-    public String visit(Identifier node){
-        return node.f0.toString();
-    }
 
     /*ArrayAllocationExpression:    new integer [f3 -> Expression()] */
     public String visit(ArrayAllocationExpression node){
@@ -451,16 +443,14 @@ public class Generatellvm extends GJNoArguDepthFirst<String>{
         return className;
     }
 
-    /*NotExpression
-    * f1 -> Clause() */
+    /*NotExpression:    f1 -> Clause() */
     public String visit(NotExpression node){
         String clause = node.f1.accept(this);
         emit("\n\t;apply logical not, using xor\n\t" + this.state.newReg() + " = xor " + clause + ", 1");
         return "i1 %_" + (this.state.getRegCounter()-1);
     }
 
-    /*BracketExpression
-    * ( f1 -> Expression() )*/
+    /*BracketExpression:    ( f1 -> Expression() )*/
     public String visit(BracketExpression node){
         return node.f1.accept(this);
     }    

@@ -4,7 +4,8 @@ examples
 src/out
 src/Test.java
 *.vscode
-tests/out/*.ll
+*.ll
+!src/Test.ll
 src/*.class 
 src/*~ 
 src/*Parse* 

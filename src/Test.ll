@@ -48,14 +48,11 @@ define i32 @main() {
 	%_6 = getelementptr i32, i32* %_5 , i32 2
 	store i32 108, i32* %_6
 
-	;loading local variable
-	%_7 = load i8*, i8** %r
-
-	;lookup *(%_7 + 1)
-	%_8 = bitcast i8* %_7 to i32*
-	%_9 = getelementptr i32, i32* %_8, i32 2
-	%_10 = load i32, i32* %_9
-	call void (i32) @print_int(i32 %_10)
+	;lookup *(%_4 + 1)
+	%_7 = bitcast i8* %_4 to i32*
+	%_8 = getelementptr i32, i32* %_7, i32 2
+	%_9 = load i32, i32* %_8
+	call void (i32) @print_int(i32 %_9)
 	call void (i32) @print_int(i32 23)
 	ret i32 0
 }
@@ -67,16 +64,16 @@ define i32 @Base.set (i8* %this, i32 %.x){
 	store i32 %.x, i32* %x
 
 	;load address of Base.data from memory
-	%_11 = getelementptr i8, i8* %this, i32 10
-	%_12 = bitcast i8* %_11 to i32*
+	%_10 = getelementptr i8, i8* %this, i32 10
+	%_11 = bitcast i8* %_10 to i32*
 
 	;store result
-	store i32 %.x, i32* %_12
+	store i32 %.x, i32* %_11
 	call void (i32) @print_int(i32 %.x)
 
 	;loading local variable
-	%_13 = load i32, i32* %_12
-	ret i32 %_13
+	%_12 = load i32, i32* %_11
+	ret i32 %_12
 }
 
 ;Base.get
@@ -94,17 +91,6 @@ define i32 @Derived.set (i8* %this, i32 %.x){
 	;allocate space and store each parameter of the method
 	%x = alloca i32
 	store i32 %.x, i32* %x
-
-	;load field Derived.data from memory
-	%_0 = getelementptr i8, i8* %this, i32 10
-	%_1 = bitcast i8* %_0 to i32*
-	%_2 = load i32, i32* %_1
-
-	;apply arithmetic expression
-	%_3 = add i32 %_2, %.x
-
-	;store result
-	store i32 %_3, i32* %x
 	ret i32 %.x
 }
 

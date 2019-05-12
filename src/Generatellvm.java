@@ -135,8 +135,6 @@ public class Generatellvm extends GJNoArguDepthFirst<String>{
 
    		for (int i = 0; i < node.f15.size(); i++)
                node.f15.elementAt(i).accept(this);
-	    emit("\tcall void (i32) @print_int(i32 23)");
-        
         
         emit("\tret i32 0\n}\n");
    		return null;
@@ -159,6 +157,7 @@ public class Generatellvm extends GJNoArguDepthFirst<String>{
         // set class name for children to know 
         this.className = node.f1.accept(this);
 
+        // visit all member methods
         for (int i = 0; i < node.f4.size(); i++)
             node.f4.elementAt(i).accept(this);
         return null;
@@ -175,6 +174,7 @@ public class Generatellvm extends GJNoArguDepthFirst<String>{
         // set class name for children to know 
         this.className = node.f1.accept(this);
 
+        // visit all member methods
         for (int i = 0; i < node.f6.size(); i++)
             node.f6.elementAt(i).accept(this);
         return null;
@@ -251,8 +251,7 @@ public class Generatellvm extends GJNoArguDepthFirst<String>{
     /*  Assignment Statement:   f0 -> Identifier() = f2 -> Expression(); */
     public String visit(AssignmentStatement node){ 
         String leftID = node.f0.accept(this), rightSide = node.f2.accept(this), leftType, leftReg, rightType = rightSide.split(" ")[0];
-        String[] leftInfo = this.getIdAddress(leftID).split(" "); 
-        leftType = leftInfo[0]; leftReg = leftInfo[1];
+        String[] leftInfo = this.getIdAddress(leftID).split(" "); leftType = leftInfo[0]; leftReg = leftInfo[1];  // get id's type and register
 
         // if types do not match, cast left operand to the appropriate pointer type
         if(leftType.equals(rightType + "*") == false){
@@ -284,7 +283,6 @@ public class Generatellvm extends GJNoArguDepthFirst<String>{
 		String expr = node.f2.accept(this);
 		emit("\tcall void (i32) @print_int(" + expr +")");
 		return null;
-
 	}
 
     /*Expression
@@ -295,20 +293,26 @@ public class Generatellvm extends GJNoArguDepthFirst<String>{
         return node.f0.accept(this);
     }
 
-    /*ArrayLookup:  f0 -> PrimaryExpression() [f2 -> PrimaryExpression()] */
-    public String visit(ArrayLookup node){
-        String id = node.f0.accept(this), index = node.f2.accept(this).split(" ")[1];
+    /* given an index and a register holding the address of the array, load the array element requested in a register, length is stored at index 0 */
+    public String getArrayElement(String id, String index){
+        String comment = index.equals("0") ? ";get length of array at " + id.split(" ")[1] : ";lookup *(" + id.split(" ")[1] + " + " + index + ")";
 
-        emit("\n\t;lookup *(" + id.split(" ")[1] + " + " + index + ")\n"  
+        emit("\n\t" + comment + "\n"  
             +"\t" + this.state.newReg() + " = bitcast " + id + " to i32*\n"
-            +"\t" + this.state.newReg() + " = getelementptr i32, i32* %_" + (this.state.getRegCounter()-2) + ", i32 " + this.getArrayIndex(index)
+            +"\t" + this.state.newReg() + " = getelementptr i32, i32* %_" + (this.state.getRegCounter()-2) + ", i32 " + index
             +"\n\t" + this.state.newReg() + " = load i32, i32* %_" + (this.state.getRegCounter()-2));    
         return "i32 %_" + (this.state.getRegCounter()-1);
     }
 
+    /*ArrayLookup:  f0 -> PrimaryExpression() [f2 -> PrimaryExpression()] */
+    public String visit(ArrayLookup node){
+        String id = node.f0.accept(this), index = node.f2.accept(this).split(" ")[1];
+        return this.getArrayElement(id, this.getArrayIndex(index));
+    }
+
     /*ArrayLength:  f0 -> PrimaryExpression().length */
     public String visit(ArrayLength node){
-        return "later";
+        return this.getArrayElement(node.f0.accept(this), "0");
     }
 
     /* Arithmetic Expression Generic Function */
@@ -440,7 +444,7 @@ public class Generatellvm extends GJNoArguDepthFirst<String>{
     /*AllocationExpresion:  new f1 -> Identifier()() */
     public String visit(AllocationExpression node){
         String className = node.f1.accept(this);
-        return className;
+        return "todo " + className;
     }
 
     /*NotExpression:    f1 -> Clause() */

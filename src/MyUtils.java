@@ -6,7 +6,8 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap; 
 import java.util.*;
 
-public class MyUtils{
+public abstract class MyUtils{
+    
         // given an array of mini-java types, return a comma-separated String with their corresponding llvm types (e.g int -> i32)  
         protected static String getArgs(ArrayList<Pair<String, String>> args, boolean isDefinition){
             // first arg of any member method is always a pointer(8 bits) to the object its self, called "this"

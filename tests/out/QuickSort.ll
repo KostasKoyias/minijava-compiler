@@ -566,14 +566,22 @@ loop2:
 }
 
 define i32 @QS.Init(i8* %this, i32 %.sz) {
+	;store parameter sz
 	%sz = alloca i32
 	store i32 %.sz, i32* %sz
+
+	;load sz
 	%_0 = load i32, i32* %sz
+
+	;set size = sz
 	%_1 = getelementptr i8, i8* %this, i32 16
 	%_2 = bitcast i8* %_1 to i32*
 	store i32 %_0, i32* %_2
-	
+
+	;load sz	
 	%_9 = load i32, i32* %sz
+
+	;if sz < 0 then goto arr_alloc7 else arra_alloc8
 	%_6 = icmp slt i32 %_9, 0
 	br i1 %_6, label %arr_alloc7, label %arr_alloc8
 
@@ -581,8 +589,12 @@ arr_alloc7:
 	call void @throw_oob()
 	br label %arr_alloc8
 
+;number = new int[sz], (after making sure sz > 0)
 arr_alloc8:
+	; sizeof array = sz + 1 for the length to be stored at
 	%_3 = add i32 %_9, 1
+
+	; allocate space, cast to i32*, store size there and then store the whole thing where the array is
 	%_4 = call i8* @calloc(i32 4, i32 %_3)
 	%_5 = bitcast i8* %_4 to i32*
 	store i32 %_9, i32* %_5
@@ -590,6 +602,7 @@ arr_alloc8:
 	%_11 = bitcast i8* %_10 to i32**
 	store i32* %_5, i32** %_11
 	
+	; number[0] = 20, get left operand
 	%_20 = getelementptr i8, i8* %this, i32 8
 	%_21 = bitcast i8* %_20 to i32**
 	%_22 = load i32*, i32** %_21

@@ -28,13 +28,16 @@ define i32 @main() {
 	;allocate space for local variable %r
 	%r = alloca i8*
 
-	;allocate space for new array of size 2 + 1 place to store size at
-	%_0 = add i32 2, 1
+	;allocate space for local variable %len
+	%len = alloca i32
+
+	;allocate space for new array of size 13 + 1 place to store size at
+	%_0 = add i32 13, 1
 	%_1 = call i8* @calloc(i32 1, i32 %_0)
 	%_2 = bitcast i8* %_1 to i32*
 
 	;store size at index 0
-	store i32 2, i32* %_2
+	store i32 13, i32* %_2
 
 	;adjust pointer type of left operand
 	%_3 = bitcast i8** %r to i32**
@@ -42,18 +45,20 @@ define i32 @main() {
 	;store result
 	store i32* %_2, i32** %_3
 
-	;assign a value to the array element
+	;loading local variable
 	%_4 = load i8*, i8** %r
-	%_5 = bitcast i8* %_4 to i32*
-	%_6 = getelementptr i32, i32* %_5 , i32 2
-	store i32 108, i32* %_6
 
-	;lookup *(%_4 + 1)
-	%_7 = bitcast i8* %_4 to i32*
-	%_8 = getelementptr i32, i32* %_7, i32 2
-	%_9 = load i32, i32* %_8
-	call void (i32) @print_int(i32 %_9)
-	call void (i32) @print_int(i32 23)
+	;get length of array at %_4
+	%_5 = bitcast i8* %_4 to i32*
+	%_6 = getelementptr i32, i32* %_5, i32 0
+	%_7 = load i32, i32* %_6
+
+	;store result
+	store i32 %_7, i32* %len
+
+	;loading local variable
+	%_8 = load i32, i32* %len
+	call void (i32) @print_int(i32 %_8)
 	ret i32 0
 }
 
@@ -64,16 +69,12 @@ define i32 @Base.set (i8* %this, i32 %.x){
 	store i32 %.x, i32* %x
 
 	;load address of Base.data from memory
-	%_10 = getelementptr i8, i8* %this, i32 10
-	%_11 = bitcast i8* %_10 to i32*
+	%_9 = getelementptr i8, i8* %this, i32 10
+	%_10 = bitcast i8* %_9 to i32*
 
 	;store result
-	store i32 %.x, i32* %_11
-	call void (i32) @print_int(i32 %.x)
-
-	;loading local variable
-	%_12 = load i32, i32* %_11
-	ret i32 %_12
+	store i32 %.x, i32* %_10
+	ret i32 1
 }
 
 ;Base.get

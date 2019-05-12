@@ -303,10 +303,16 @@ public class Generatellvm extends GJNoArguDepthFirst<String>{
     *       f4 -> Statement()
     */
     public String visit(WhileStatement node){
-
-        String condition = node.f2.accept(this);
         
+        // get a set of labels and load the if condition to a register
+        String[] whileLabel = this.state.newLabel("while");
+        String condition;
+
+        emit("\n\t;while statement\n\tbr label %" + whileLabel[0] + "\n\n" + whileLabel[0] + ":");
+        condition = node.f2.accept(this); 
+        emit("\tbr " + condition + " ,label %" + whileLabel[1] + ", label %" + whileLabel[2] + "\n\n" + whileLabel[1] + ":");
         node.f4.accept(this);
+        emit("\n\tbr label %" + whileLabel[0] + "\n" + whileLabel[2] + ":\n");
         return condition;
     }
 

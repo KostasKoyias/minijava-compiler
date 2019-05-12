@@ -56,57 +56,38 @@ define i32 @main() {
 	;store result
 	store i32 %_7, i32* %len
 
+	;while statement
+	br label %while_0
+
+while_0:
+
 	;loading local variable
 	%_8 = load i32, i32* %len
 
 	;apply arithmetic expression
-	%_9 = icmp slt i32 %_8, 10
+	%_9 = icmp slt i32 5, %_8
+	br i1 %_9 ,label %do_0, label %done_0
 
-	;if statement
-	br i1 %_9 ,label %if_0, label %else_0
-
-if_0:
+do_0:
 
 	;loading local variable
 	%_10 = load i32, i32* %len
 
-	;display an integer at stdout
-	call void (i32) @print_int(i32 %_10)
-	br label %fi_0
-
-else_0:
-
-	;display an integer at stdout
-	call void (i32) @print_int(i32 5)
-	br label %fi_0
-
-fi_0:
-
-	;loading local variable
-	%_11 = load i32, i32* %len
-
 	;apply arithmetic expression
-	%_12 = icmp slt i32 0, %_11
+	%_11 = sub i32 %_10, 1
 
-	;if statement
-	br i1 %_12 ,label %if_1, label %else_1
-
-if_1:
+	;store result
+	store i32 %_11, i32* %len
 
 	;loading local variable
-	%_13 = load i32, i32* %len
+	%_12 = load i32, i32* %len
 
 	;display an integer at stdout
-	call void (i32) @print_int(i32 %_13)
-	br label %fi_1
+	call void (i32) @print_int(i32 %_12)
 
-else_1:
+	br label %while_0
+done_0:
 
-	;display an integer at stdout
-	call void (i32) @print_int(i32 5)
-	br label %fi_1
-
-fi_1:
 	ret i32 0
 }
 
@@ -117,11 +98,11 @@ define i32 @Base.set (i8* %this, i32 %.x){
 	store i32 %.x, i32* %x
 
 	;load address of Base.data from memory
-	%_14 = getelementptr i8, i8* %this, i32 10
-	%_15 = bitcast i8* %_14 to i32*
+	%_13 = getelementptr i8, i8* %this, i32 10
+	%_14 = bitcast i8* %_13 to i32*
 
 	;store result
-	store i32 %.x, i32* %_15
+	store i32 %.x, i32* %_14
 	ret i32 1
 }
 

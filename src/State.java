@@ -8,7 +8,27 @@ import java.util.*;
 public class State{
     private Map<String, Info> ids; 
     int regCounter;
-    int[] labelsCounter = new int[2];
+    Statement[] statements;
+
+    class Statement{
+        int counter;
+        String[] labels;
+
+        Statement(String[] labels){
+            this.labels = labels;
+            this.counter = 0;
+        }
+
+        public String[] getLabels(){
+            int len = this.labels.length;
+            String[] rv =  new String[len];
+            for(int i = 0; i < len ; i++)
+                rv[i] = this.labels[i] + "_" + this.counter;
+            this.counter++;            
+            return rv;
+                
+        }
+    }
 
     // nested class Info holding all info needed for a given identifier
     class Info{
@@ -29,8 +49,8 @@ public class State{
     private static final Map<String, Integer> labelTypes = new LinkedHashMap<String, Integer>() {
         private static final long serialVersionUID = 1L;
         {
-            put("oob", 0);
-            put("alloca", 1);
+            put("if", 0);
+            put("while", 1);
         }
     }; 
 
@@ -38,6 +58,9 @@ public class State{
     State(){
         this.ids = new LinkedHashMap<String, Info>();
         this.regCounter = 0;
+        this.statements = new Statement[2];
+        this.statements[0] =  new Statement(new String[] {"if", "else", "fi"});
+        this.statements[1] =  new Statement(new String[] {"while", "do", "done"});
     }
 
     // return next register available, update method's state by associating the identifier to the register, a data-type and a "is pointer" field  
@@ -82,15 +105,19 @@ public class State{
         return this.regCounter;
     }
 
-    // get a new label of the type requested, label types are declare in a map called labels along with their id
-    public String getLabel(String label){
-        return State.labelTypes.containsKey(label) ? label + "_" + (this.labelsCounter[State.labelTypes.get(label)]++) + ": " : null;
+    // get a new Statement of the type requested, label types are declare in a map called labels along with their id
+    public String[] newLabel(String label){
+        int index = State.labelTypes.containsKey(label) ? State.labelTypes.get(label) : -1;
+        if(index == -1)
+            return null;
+        
+        return this.statements[index].getLabels();
     }
 
     // reset state
     public void clear(){
         this.ids.clear();
         this.regCounter = 0;
-        Arrays.fill(this.labelsCounter, 0);
+        Arrays.fill(this.statements, null);
     }
 }

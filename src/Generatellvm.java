@@ -265,7 +265,7 @@ public class Generatellvm extends GJNoArguDepthFirst<String>{
         String[] rightInfo = right.split(" ");
         emit("\n\t;apply arithmetic expression\n"
            + "\t" + this.state.newReg() + " = " + op + " " + left + ", " + rightInfo[1]); 
-        return rightInfo[0] + " %_" + (this.state.getRegCounter()-1);
+        return (op.equals("icmp slt") ? "i1" : "i32") + " %_" + (this.state.getRegCounter()-1);
     }
 
     /*AndExpression f0 -> Clause() &&  f2 -> Clause() */
@@ -353,7 +353,7 @@ public class Generatellvm extends GJNoArguDepthFirst<String>{
     /*IntegerLiteral
     * f0 -> <INTEGER_LITERAL> */
     public String visit(IntegerLiteral node){
-        return "i32 " + node.f0.accept(this);
+        return "i32 " + node.f0;
     }
 
     /*TrueLiteral

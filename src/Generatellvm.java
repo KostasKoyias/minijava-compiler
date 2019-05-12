@@ -278,10 +278,42 @@ public class Generatellvm extends GJNoArguDepthFirst<String>{
         return null;
     }
 
+    /*IfStatement
+    * if( f2 -> Expression())
+    *       f4 -> Statement()
+    * else
+    *       f6 -> Statement()
+    */
+    public String visit(IfStatement node){
+
+        // get a set of labels and load the if condition to a register
+        String[] ifLabel = this.state.newLabel("if");
+        String condition = node.f2.accept(this), brEnd = "\tbr label %" + ifLabel[2] + "\n\n";
+
+        emit("\n\t;if statement\n\tbr " + condition + " ,label %" + ifLabel[0] + ", label %" + ifLabel[1] +"\n\n" + ifLabel[0] + ":");
+        node.f4.accept(this);
+        emit(brEnd + ifLabel[1] + ":");
+        node.f6.accept(this);
+        emit(brEnd + ifLabel[2] + ":");
+        return null;
+    }
+
+    /*WhileStatement
+    * while( f2 -> Expression())
+    *       f4 -> Statement()
+    */
+    public String visit(WhileStatement node){
+
+        String condition = node.f2.accept(this);
+        
+        node.f4.accept(this);
+        return condition;
+    }
+
     /*Print Statement: System.out.println( f2 -> Expression());*/
 	public String visit(PrintStatement node){
 		String expr = node.f2.accept(this);
-		emit("\tcall void (i32) @print_int(" + expr +")");
+		emit("\n\t;display an integer at stdout\n\tcall void (i32) @print_int(" + expr +")");
 		return null;
 	}
 

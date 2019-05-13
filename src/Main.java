@@ -49,11 +49,16 @@ class Main {
                     }  
                     
                 }
+                else 
+                    System.out.println("To view field and method offsets for each class rerun with --offsets");
                 
                 /* generate intermediate representation code */
                 fout = new BufferedWriter(new FileWriter(arg.replace("java", "ll")));
-                Generatellvm v1 = new Generatellvm(fout, v0.classes);
+                Generatellvm v1 = new Generatellvm(fout, v0.classes, v0.messageQueue);
                 root.accept(v1);
+                System.out.println("Collected information about the following messages");
+                for(String message : v0.messageQueue)
+                    System.out.println("message type: " + message);
 
             }
             /* handle exceptions */

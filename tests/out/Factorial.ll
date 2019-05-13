@@ -22,10 +22,10 @@ define void @throw_oob() {
 }
 
 define i32 @main() {
-	%_0 = call i8* @calloc(i32 1, i32 8)	; allocate space for the v-table pointer 
+	%_0 = call i8* @calloc(i32 1, i32 8)	; allocate space for the object 
 	%_1 = bitcast i8* %_0 to i8***			
 	%_2 = getelementptr [1 x i8*], [1 x i8*]* @.Fac_vtable, i32 0, i32 0 
-	store i8** %_2, i8*** %_1				; v-table pointer points to v-table[0]
+	store i8** %_2, i8*** %_1				; store v-table pointer at 1st position, it points to v-table[0]
 	; Fac.ComputeFac : 0
 	%_3 = bitcast i8* %_0 to i8***
 	%_4 = load i8**, i8*** %_3

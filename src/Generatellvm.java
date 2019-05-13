@@ -1,6 +1,8 @@
 import java.io.*;
 import syntaxtree.*;
 import javafx.util.Pair;
+import java.util.LinkedList; 
+import java.util.Queue;
 import java.util.LinkedHashMap; 
 import visitor.GJNoArguDepthFirst;
 import java.util.*;
@@ -8,14 +10,16 @@ import java.util.*;
 public class Generatellvm extends GJNoArguDepthFirst<String>{
     private BufferedWriter out;
     protected Map<String, ClassData> data;
+    private LinkedList<String> messageQueue;
     private String className;
     private State state; 
 
     // Constructor: set a pointer to output file and set class data collected during the first pass
-    Generatellvm(BufferedWriter out, Map<String, ClassData> data){
+    Generatellvm(BufferedWriter out, Map<String, ClassData> data, LinkedList<String> messageQueue){
         this.out = out;
         this.data = data;
         this.state = new State();
+        this.messageQueue = messageQueue;        
     }
 
     // given a register or an integer add 1 to it because 1st place of an array is reserved for the length to be stored at, return the result
@@ -274,7 +278,7 @@ public class Generatellvm extends GJNoArguDepthFirst<String>{
         this.checkArrayIndex(leftID, index, false);        
 
         // load a pointer to the array, cast it to integer pointer, get it to point at the index-th element and modify it
-        emit("\n\t;assign a value to the array element\n\t" + this.state.newReg(leftID, "i8*", false) + " = load i8*, " + leftInfo + "\n\t"
+        emit("\n\t;assign a value to the array element\n\t" + this.state.newReg() + " = load i8*, " + leftInfo + "\n\t"
             + this.state.newReg() + " = bitcast i8* %_" + (this.state.getRegCounter()-2) + " to i32*\n\t"
             + this.state.newReg() + " = getelementptr i32, i32* %_" + (this.state.getRegCounter()-2) + " , i32 " + this.getArrayIndex(index)
             + "\n\tstore " + rightSide +", i32* %_" + (this.state.getRegCounter()-1));
@@ -333,6 +337,53 @@ public class Generatellvm extends GJNoArguDepthFirst<String>{
     public String visit(Expression node){
         return node.f0.accept(this);
     }
+
+    /*MessageSend
+    * f0 -> PrimaryExpression().f2 -> Identifier()(f4 -> ( ExpressionList() )?) */
+    public String visit(MessageSend node){
+
+        // get class name and address, as well as the method name 
+        String classPointer = node.f0.accept(this), methodName = node.f2.accept(this), signature, returnType;
+        //MethodData methodData = this.data.get(this.messageQueue.removeFirst()).methods.get(methodName);
+
+        // get offset and return type of method, also filter the signature getting just the type of it, not the exact arguments
+        int offset = 0;//methodData.offset;
+        returnType = "i32";//methodData.returnType;
+        signature = node.f4.present() ? node.f4.accept(this).replaceFirst("[(]", "(" + classPointer + ", ") : "(" + classPointer + ")";
+
+
+        emit("\t" + this.state.newReg() + " = bitcast " + classPointer + " to i8*** \t\t\t\t;" + (this.state.getRegCounter()-1) + " points to the vTable"
+            +"\n\t" + this.state.newReg() + " = load i8**, i8*** %_" + (this.state.getRegCounter()-2) + "\t\t\t\t\t;"+ (this.state.getRegCounter()-1) 
+            + " is the vTable\n\t" + this.state.newReg() + " = getelementptr i8*, i8** %_" + (this.state.getRegCounter()-2) + ", i32 " + offset + "\t;"
+            +(this.state.getRegCounter()-1) + " points to the address of " + methodName
+            +"\n\t" + this.state.newReg() + " = load i8*, i8** %_" + (this.state.getRegCounter()-2)
+            + "\t\t\t\t\t;" + (this.state.getRegCounter()-1) + " point to the body of " + methodName
+            +"\n\t" + this.state.newReg() + " = bitcast i8* %_" + (this.state.getRegCounter()-2) + " to " + returnType + " " 
+            + MyUtils.filterSignature(signature, classPointer) + "*\t;cast pointer to the appropriate size\n\t" 
+            + this.state.newReg() + " = call " + returnType + " %_" +(this.state.getRegCounter()-2) + signature);
+        return "i32 %_" + (this.state.getRegCounter()-1);	   
+    }
+
+    /*ExpressionList: f0 -> Expression() f1 -> ExpressionTail()*/
+    public String visit(ExpressionList node){
+        return "(" + node.f0.accept(this) + node.f1.accept(this) + ")";
+    }
+
+    /*ExpressionTail: f0 -> ( ExpressionTerm() )* */																		
+    public String visit(ExpressionTail node){
+        String rv = "";
+
+        // collect all arguments
+        for (int i = 0; i < node.f0.size(); i++)
+            rv += node.f0.elementAt(i).accept(this);
+        return rv;
+    }
+
+    /*ExpressionTerm: ,f1 -> Expression() */
+    public String visit(ExpressionTerm node){
+        return ", " + node.f1.accept(this);
+    }
+
 
     /* given an index and a register holding the address of the array, load the array element requested in a register, length is stored at index 0 */
     public String getArrayElement(String id, String index){

@@ -57,7 +57,8 @@ public abstract class MyUtils{
             int splitAt;
             for(String par : params){
                 splitAt = par.indexOf(':');
-                rv.add(new Pair(par.substring(0, splitAt), par.substring(splitAt+1)));
+                if(splitAt != -1)
+                    rv.add(new Pair(par.substring(0, splitAt), par.substring(splitAt+1)));
             }
             return rv;
         }
@@ -72,5 +73,18 @@ public abstract class MyUtils{
                 }
             }
             return null;
+        }
+
+        // get argument list in of form (type_0 arg0, ..., type_n arg_n) and filter it, so that it gets the form of (type_0, ..., type_n)
+        public static String filterSignature(String signature, String classPointer){
+            String[] args = signature.split(",");
+            String rv = "";
+            int len = args.length;
+            
+            if(len == 1)
+                return "(i8*)" ;
+            for(int i = 0; i < len; i++)
+                rv += args[i].trim().split(" ")[0] + (i + 1 ==  len ? ")" : ", ");
+            return rv;
         }
 }

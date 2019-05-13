@@ -88,7 +88,7 @@ public class FirstVisitor extends GJDepthFirst<String, ClassData>{
         for(int i = 0; i < node.f3.size(); i++)
             node.f3.elementAt(i).accept(this, cd);
 
-        /* pass ClassData member method */
+        /* pass ClassData to each member method */
         for(int i = 0; i < node.f4.size(); i++)
             node.f4.elementAt(i).accept(this, cd);
         
@@ -164,10 +164,19 @@ public class FirstVisitor extends GJDepthFirst<String, ClassData>{
     	if (node.f4.present())
             args = MyUtils.getParams(node.f4.accept(this, null).split(","));
 
-        /* store method, if it already exists, it will be overriden*/
-        MethodData method = new MethodData(this.className, type, this.nextMethod, args);
-        data.methods.put(id, method);
-        this.nextMethod += 8;
+        /* visit both all statement nodes and the expression of the return statement in order to detect any messages send*/
+        for(int i = 0; i < node.f8.size(); i++)
+            node.f8.elementAt(i).accept(this, null);
+        node.f10.accept(this, null);
+
+        /* if method already exists, override it by defining this class as the last to implement it
+           other fields like return type or arguments do not need to be update it, mini-java does not support parametric polymorphism*/
+        if(data.methods.containsKey(id))
+            data.methods.put(id, new MethodData(this.className, type, data.methods.get(id).offset, args));
+        else{
+            data.methods.put(id, new MethodData(this.className, type, this.nextMethod, args));
+            this.nextMethod += ClassData.pointerSize;
+        }
         return null;
     }
 
@@ -236,7 +245,6 @@ public class FirstVisitor extends GJDepthFirst<String, ClassData>{
     /*MessageSend
     * f0 -> PrimaryExpression().f2 -> Identifier()(f4 -> ( ExpressionList() )?) */
     public String visit(MessageSend node, ClassData data){
-        System.out.println("message: " + node.f2.accept(this, null));
         this.messageQueue.addLast(node.f0.accept(this, null));
         return null;
     }
@@ -252,10 +260,8 @@ public class FirstVisitor extends GJDepthFirst<String, ClassData>{
         if(childNode == 3)
             return this.vars.get(node.f0.accept(this, null));
         // in case of a 'this' pointer, return the name of this class
-        else if(childNode == 4){
-            System.out.println("this--> " + this.className);
+        else if(childNode == 4)
             return this.className;
-        }
         // in case of an allocation or a bracket expression, actual data type will be passed up 
         else if(childNode > 5)
             return node.f0.accept(this, null);

@@ -26,7 +26,7 @@ public class Generatellvm extends GJNoArguDepthFirst<String>{
     private String getArrayIndex(String index){
 
         // if a register was passed, add 1 to the it and store the result in a register who will be returned
-        if(index.startsWith("%_")){
+        if(index.startsWith("%")){
             emit("\n\t" + this.state.newReg() + " = add i32 " + index + ", 1\n");
             return "%_" + (this.state.getRegCounter()-1);
         }
@@ -344,24 +344,24 @@ public class Generatellvm extends GJNoArguDepthFirst<String>{
 
         // get class name and address, as well as the method name 
         String classPointer = node.f0.accept(this), methodName = node.f2.accept(this), signature, returnType;
-        //MethodData methodData = this.data.get(this.messageQueue.removeFirst()).methods.get(methodName);
+        MethodData methodData = this.data.get(this.messageQueue.removeFirst()).methods.get(methodName);
 
         // get offset and return type of method, also filter the signature getting just the type of it, not the exact arguments
-        int offset = 0;//methodData.offset;
-        returnType = "i32";//methodData.returnType;
+        int offset = methodData.offset;
+        returnType = ClassData.getSize(methodData.returnType).getValue();
         signature = node.f4.present() ? node.f4.accept(this).replaceFirst("[(]", "(" + classPointer + ", ") : "(" + classPointer + ")";
 
 
-        emit("\t" + this.state.newReg() + " = bitcast " + classPointer + " to i8*** \t\t\t\t;" + (this.state.getRegCounter()-1) + " points to the vTable"
-            +"\n\t" + this.state.newReg() + " = load i8**, i8*** %_" + (this.state.getRegCounter()-2) + "\t\t\t\t\t;"+ (this.state.getRegCounter()-1) 
-            + " is the vTable\n\t" + this.state.newReg() + " = getelementptr i8*, i8** %_" + (this.state.getRegCounter()-2) + ", i32 " + offset + "\t;"
+        emit("\t" + this.state.newReg() + " = bitcast " + classPointer + " to i8*** \t\t\t\t;%_" + (this.state.getRegCounter()-1) + " points to the vTable"
+            +"\n\t" + this.state.newReg() + " = load i8**, i8*** %_" + (this.state.getRegCounter()-2) + "\t\t\t\t;%_"+ (this.state.getRegCounter()-1) 
+            + " is the vTable\n\t" + this.state.newReg() + " = getelementptr i8*, i8** %_" + (this.state.getRegCounter()-2) + ", i32 " + offset + "\t;%_"
             +(this.state.getRegCounter()-1) + " points to the address of " + methodName
             +"\n\t" + this.state.newReg() + " = load i8*, i8** %_" + (this.state.getRegCounter()-2)
-            + "\t\t\t\t\t;" + (this.state.getRegCounter()-1) + " point to the body of " + methodName
+            + "\t\t\t\t\t;%_" + (this.state.getRegCounter()-1) + " points to the body of " + methodName
             +"\n\t" + this.state.newReg() + " = bitcast i8* %_" + (this.state.getRegCounter()-2) + " to " + returnType + " " 
-            + MyUtils.filterSignature(signature, classPointer) + "*\t;cast pointer to the appropriate size\n\t" 
+            + MyUtils.filterSignature(signature, classPointer) + "*\t;%_cast pointer to the appropriate size\n\t" 
             + this.state.newReg() + " = call " + returnType + " %_" +(this.state.getRegCounter()-2) + signature);
-        return "i32 %_" + (this.state.getRegCounter()-1);	   
+        return returnType + " %_" + (this.state.getRegCounter()-1);	   
     }
 
     /*ExpressionList: f0 -> Expression() f1 -> ExpressionTail()*/
@@ -545,7 +545,7 @@ public class Generatellvm extends GJNoArguDepthFirst<String>{
 
     /*ThisExpression:   f0 -> "this" */ 
     public String visit(ThisExpression node){  
-        return "%this";
+        return "i8* %this";
     }    
 
     /*ArrayAllocationExpression:    new integer [f3 -> Expression()] */

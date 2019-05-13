@@ -7,8 +7,8 @@ public class ClassData{
     String parentName;
     int size;
     Map <String, Pair<String, Integer>> vars;       // records of form: (variable_name, (type, offset))
-    Map <String, MethodData> methods;    // records of form: (function_name, (return_type, offset, argTypes))
-    public static final Integer pointerSize = 8;
+    Map <String, MethodData> methods;    // records of form: (function_name, (class_that_last_implemented_it, return_type, offset, argTypes))
+    public static final Integer pointerSize = 1;
 
     /* map all mini java data types to their actual size in bytes */
     private static final Map<String, Pair<Integer,String>> sizes = new LinkedHashMap<String, Pair<Integer,String>>() {
@@ -16,7 +16,7 @@ public class ClassData{
         {
             put("boolean", new Pair(1, "i1"));
             put("integer", new Pair(4, "i32"));
-            put("array", new Pair(8, "i8*"));
+            put("array", new Pair(1, "i8*"));
         }
     };
 
@@ -35,9 +35,12 @@ public class ClassData{
 
     public void setSize(){
         int size = 0;
+        Pair<Integer, String> typeInfo;
         if(this.vars.size() > 0){
-            for(Map.Entry<String, Pair<String, Integer>> entry : this.vars.entrySet())
-                size += ClassData.sizes.get(entry.getValue().getKey()).getKey();
+            for(Map.Entry<String, Pair<String, Integer>> entry : this.vars.entrySet()){
+                typeInfo = ClassData.sizes.get(entry.getValue().getKey());
+                size += ClassData.sizes.containsKey(typeInfo) ? ClassData.sizes.get(typeInfo).getKey() : 1; 
+            }
         }
         this.size = size + ClassData.pointerSize;
     }

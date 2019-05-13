@@ -9,6 +9,7 @@ public class State{
     private Map<String, Info> ids; 
     private int regCounter;
     private Statement[] statements;
+    private static int statementsNumber = 3;
 
     // nested class Info holding all info needed for a given identifier
     class Info{
@@ -43,6 +44,10 @@ public class State{
             return rv;
                 
         }
+
+        public void resetCounter(){
+            this.counter = 0;
+        }
     }
 
     // map all kinds of labels to be used to a code
@@ -59,19 +64,15 @@ public class State{
     State(){
         this.ids = new LinkedHashMap<String, Info>();
         this.regCounter = 0;
-        this.statements = new Statement[3];
-        this.statements[0] =  new Statement(new String[] {"if", "else", "fi"});
-        this.statements[1] =  new Statement(new String[] {"while", "do", "done"});
+        this.statements = new Statement[State.statementsNumber];
+        this.statements[0] = new Statement(new String[] {"if", "else", "fi"});
+        this.statements[1] = new Statement(new String[] {"while", "do", "done"});
         this.statements[2] = new Statement(new String[] {"outOfBounds", "withinBounds"});
     }
 
     // return next register available, update method's state by associating the identifier to the register, a data-type and a "is pointer" field  
     public String newReg(){
         return "%_" + this.regCounter++;
-    }
-
-    public String newReg(String llvmType, boolean isLocal){
-        return this.newReg(null, llvmType, isLocal);
     }
 
     public String newReg(String id, String llvmType, boolean isLocal){
@@ -120,6 +121,7 @@ public class State{
     public void clear(){
         this.ids.clear();
         this.regCounter = 0;
-        Arrays.fill(this.statements, null);
+        for(int i = 0; i < State.statementsNumber; i++)
+            this.statements[i].resetCounter();
     }
 }

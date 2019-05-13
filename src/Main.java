@@ -38,7 +38,7 @@ class Main {
                         System.out.println("Class: " + name);
 
                         /* For each variable of the class, print offset */
-                        System.out.println("\n\tFields\n\t------\n");
+                        System.out.println("\n\tFields\n\t------\n\t\tthis: 0");
                         for(Map.Entry<String, Pair<String, Integer>> var : entry.getValue().vars.entrySet())
                             System.out.println("\t\t" + name + "." + var.getKey() + ": " + var.getValue().getValue());
 
@@ -56,10 +56,6 @@ class Main {
                 fout = new BufferedWriter(new FileWriter(arg.replace("java", "ll")));
                 Generatellvm v1 = new Generatellvm(fout, v0.classes, v0.messageQueue);
                 root.accept(v1);
-                System.out.println("Collected information about the following messages");
-                for(String message : v0.messageQueue)
-                    System.out.println("message type: " + message);
-
             }
             /* handle exceptions */
             catch(ParseException ex){

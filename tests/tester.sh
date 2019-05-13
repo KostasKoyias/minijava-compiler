@@ -7,7 +7,7 @@ error_msg(){
 
 execPath=$(dirname $(find .. -name "Main.class"))
 cd $execPath
-testPath=$(find .. -name "tests")/in
+testPath=$(find .. -name "in")
 let fail=0
 
 # for each test case/file
@@ -41,7 +41,7 @@ do
 done 
 
 # cleanup and display end result
-rm $testPath/*.ll
+rm $testPath/*.ll -f
 printf "\n\e[1mEnd result: "
 if [ $fail -ne 0 ]
 then 

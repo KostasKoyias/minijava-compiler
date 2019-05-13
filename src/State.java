@@ -10,6 +10,21 @@ public class State{
     private int regCounter;
     private Statement[] statements;
 
+    // nested class Info holding all info needed for a given identifier
+    class Info{
+        String reg;
+        String type;
+        boolean isLocal;
+
+        Info(String reg, String type, boolean isLocal){
+            this.reg = reg; this.type = type; this.isLocal = isLocal;
+        }
+
+        public Info clone(){  
+            return new Info(this.reg, this.type, this.isLocal);  
+        }  
+    }
+
     class Statement{
         int counter;
         String[] labels;
@@ -30,27 +45,13 @@ public class State{
         }
     }
 
-    // nested class Info holding all info needed for a given identifier
-    class Info{
-        String reg;
-        String type;
-        boolean isLocal;
-
-        Info(String reg, String type, boolean isLocal){
-            this.reg = reg; this.type = type; this.isLocal = isLocal;
-        }
-
-        public Info clone(){  
-            return new Info(this.reg, this.type, this.isLocal);  
-        }  
-    }
-
-    // map all labels to be used to a code
+    // map all kinds of labels to be used to a code
     private static final Map<String, Integer> labelTypes = new LinkedHashMap<String, Integer>() {
         private static final long serialVersionUID = 1L;
         {
             put("if", 0);
             put("while", 1);
+            put("oob", 2);
         }
     }; 
 
@@ -58,9 +59,10 @@ public class State{
     State(){
         this.ids = new LinkedHashMap<String, Info>();
         this.regCounter = 0;
-        this.statements = new Statement[2];
+        this.statements = new Statement[3];
         this.statements[0] =  new Statement(new String[] {"if", "else", "fi"});
         this.statements[1] =  new Statement(new String[] {"while", "do", "done"});
+        this.statements[2] = new Statement(new String[] {"outOfBounds", "withinBounds"});
     }
 
     // return next register available, update method's state by associating the identifier to the register, a data-type and a "is pointer" field  

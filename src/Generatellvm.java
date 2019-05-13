@@ -268,7 +268,10 @@ public class Generatellvm extends GJNoArguDepthFirst<String>{
 
     /*  ArrayAssignmentStatement:   f0 -> Identifier() [f2 -> Expression()] = f5 -> Expression(); */
     public String visit(ArrayAssignmentStatement node){
-        String leftID = node.f0.accept(this), leftInfo = this.getIdAddress(leftID), index = node.f2.accept(this).split(" ")[1], rightSide = node.f5.accept(this); 
+        String leftID = node.f0.accept(this), leftInfo = this.getIdAddress(leftID), index = node.f2.accept(this).split(" ")[1], rightSide = node.f5.accept(this);
+        
+        // make sure array index is within bounds
+        this.checkArrayIndex(leftID, index, false);        
 
         // load a pointer to the array, cast it to integer pointer, get it to point at the index-th element and modify it
         emit("\n\t;assign a value to the array element\n\t" + this.state.newReg(leftID, "i8*", false) + " = load i8*, " + leftInfo + "\n\t"
@@ -342,9 +345,35 @@ public class Generatellvm extends GJNoArguDepthFirst<String>{
         return "i32 %_" + (this.state.getRegCounter()-1);
     }
 
+    /* given an array and an index, throw outOfBounds exception if index given is either negative or too large*/
+    public void checkArrayIndex(String id, String index, boolean loaded){   
+        String len;
+        String[] label = this.state.newLabel("oob");
+
+        // get length of array
+        if(!loaded){
+            emit("\n\t;load array\n\t" + this.state.newReg() + " = load i8*, i8** %" + id);
+            len = this.getArrayElement("i8* %_" + (this.state.getRegCounter()-1), "0").split(" ")[1];
+        }
+        else 
+            len = this.getArrayElement(id, "0").split(" ")[1];
+
+        // (index < 0) xor (index < array.length) ? then inBounds : else throw outOfBounds exception
+        emit("\n\t;make sure index \"" + index + "\" is within bounds\n\t" + this.state.newReg() + " = icmp slt i32 " + index + ", 0"
+            +"\n\t" + this.state.newReg() + " = icmp slt i32 " + index + ", " + len
+            +"\n\t" + this.state.newReg() + " = xor i1 %_" + (this.state.getRegCounter()-3) + ", %_" + (this.state.getRegCounter()-2)
+            +"\n\tbr i1 %_" + (this.state.getRegCounter()-1) + ", label %" + label[1] + ", label %" + label[0] + "\n\n" + label[0]
+            +":\n\n\tcall void @throw_oob()\n\tbr label %" + label[1] + "\n\n" + label[1] + ":\n"); 
+    }
+
     /*ArrayLookup:  f0 -> PrimaryExpression() [f2 -> PrimaryExpression()] */
     public String visit(ArrayLookup node){
         String id = node.f0.accept(this), index = node.f2.accept(this).split(" ")[1];
+
+        // make sure array index is within bounds
+        this.checkArrayIndex(id, index, true);
+
+        // return a register holding the address of the index-th element 
         return this.getArrayElement(id, this.getArrayIndex(index));
     }
 

@@ -553,7 +553,7 @@ public class Generatellvm extends GJNoArguDepthFirst<String>{
         String size = node.f3.accept(this).split(" ")[1];
         emit("\n\t;allocate space for new array of size " + size + " + 1 place to store size at\n\t" 
             + this.state.newReg() + " = add i32 " + size + ", 1\n"
-            +"\t" + this.state.newReg() + " = call i8* @calloc(i32 1, i32 %_" + (this.state.getRegCounter()-2) + ")\n" 
+            +"\t" + this.state.newReg() + " = call i8* @calloc(i32 4, i32 %_" + (this.state.getRegCounter()-2) + ")\n" 
             +"\t" + this.state.newReg() + " = bitcast i8* %_" + (this.state.getRegCounter()-2) + " to i32*\n"
             +"\n\t;store size at index 0\n\tstore i32 " + size + ", i32* %_" + (this.state.getRegCounter()-1));      
         return "i32* %_" + (this.state.getRegCounter()-1);

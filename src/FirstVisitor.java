@@ -26,22 +26,6 @@ public class FirstVisitor extends GJDepthFirst<String, ClassData>{
         this.nextMethod = new Integer(0);
     }
 
-    /*  Goal
-     f0 -> MainClass()
-     f1 -> ( TypeDeclaration() )*
-     f2 -> <EOF>
-    */
-    public String visit(Goal node, ClassData data){
-
-        // visit main class in order to collect information about messages 
-        node.f0.accept(this, null);
-
-        // visit all user-defined classes 
-        for(int i = 0; i < node.f1.size(); i++)
-            node.f1.elementAt(i).accept(this, null);
-        return null; 
-    }
-
     @CaseOfMessageSendOnly
     /*  MainClass
         class f1 -> Identifier(){
@@ -53,24 +37,11 @@ public class FirstVisitor extends GJDepthFirst<String, ClassData>{
         this.className = node.f1.accept(this, null);
         ClassData cd = new ClassData(null);
         MethodData md = new MethodData(this.className, "void", 0, null);
-
-   		for (int i = 0; i < node.f14.size(); i++)
- 		   node.f14.elementAt(i).accept(this, cd);
+ 		node.f14.accept(this, cd);
 
         cd.methods.put("main", md);
         this.classes.put(this.className, cd);
    		return null;
-    }
-
-    /* TypeDeclaration
-    f0 -> ClassDeclaration() | ClassExtendsDeclaration() */
-    public String visit(TypeDeclaration node, ClassData data){
-
-        /* initialize offsets for each new class*/
-        this.nextVar = 0 + ClassData.pointerSize;
-        this.nextMethod = 0;
-        node.f0.accept(this, null);
-        return null;
     }
 
     /* ClassDeclaration
@@ -84,14 +55,17 @@ public class FirstVisitor extends GJDepthFirst<String, ClassData>{
         ClassData cd = new ClassData(null);
         this.className = id;
 
+        /* initialize offsets */
+        this.nextVar = 0 + ClassData.pointerSize;
+        this.nextMethod = 0;
+
         /* pass ClassData to each field */
-        for(int i = 0; i < node.f3.size(); i++)
-            node.f3.elementAt(i).accept(this, cd);
+        node.f3.accept(this, cd);
 
         /* pass ClassData to each member method */
-        for(int i = 0; i < node.f4.size(); i++)
-            node.f4.elementAt(i).accept(this, cd);
-        
+        node.f4.accept(this, cd);
+ 
+        /* enter class data collected in the symbol table */
         cd.setSize();
         this.classes.put(id, cd);
         return null;
@@ -115,13 +89,12 @@ public class FirstVisitor extends GJDepthFirst<String, ClassData>{
         this.nextMethod = cd.methods.size() * ClassData.pointerSize;
 
         /* pass ClassData to each field */
-    	for (int i = 0; i < node.f5.size(); i++)
-            node.f5.elementAt(i).accept(this, cd);
+        node.f5.accept(this, cd);
             
         /* pass ClassData to each member method */
-    	for (int i = 0; i < node.f6.size(); i++)
-            node.f6.elementAt(i).accept(this, cd);
+        node.f6.accept(this, cd);
 
+        /* enter class data collected in the symbol table */        
         cd.setSize();
         this.classes.put(id, cd);
     	return null;
@@ -165,8 +138,7 @@ public class FirstVisitor extends GJDepthFirst<String, ClassData>{
             args = MyUtils.getParams(node.f4.accept(this, null).split(","));
 
         /* visit both all statement nodes and the expression of the return statement in order to detect any messages send*/
-        for(int i = 0; i < node.f8.size(); i++)
-            node.f8.elementAt(i).accept(this, null);
+        node.f8.accept(this, null);
         node.f10.accept(this, null);
 
         /* if method already exists, override it by defining this class as the last to implement it
@@ -208,20 +180,15 @@ public class FirstVisitor extends GJDepthFirst<String, ClassData>{
 
     /* Type: f0 -> ArrayType() | BooleanType() | IntegerType() | Identifier() */
     public String visit(Type node, ClassData data){
-        return node.f0.accept(this, null);
-    }
-
-    /* Return each primitive type of MiniJava(int, int [] and boolean) as a String */ 
-    public String visit(ArrayType node, ClassData data){
-        return "array";
-    }
-
-    public String visit(BooleanType node, ClassData data){
-        return "boolean";
-    }
-
-    public String visit(IntegerType node, ClassData data){
-        return "integer";
+        int which = node.f0.which;
+        if (which == 0)
+            return "array";
+        else if(which == 1)
+            return "boolean"; 
+        else if(which == 2)
+            return "integer"; 
+        else
+            return node.f0.accept(this, null);  // identifier
     }
     
     /* Identifier f0: return the id as a string*/
@@ -246,6 +213,7 @@ public class FirstVisitor extends GJDepthFirst<String, ClassData>{
     * f0 -> PrimaryExpression().f2 -> Identifier()(f4 -> ( ExpressionList() )?) */
     public String visit(MessageSend node, ClassData data){
         this.messageQueue.addLast(node.f0.accept(this, null));
+        node.f4.accept(this, null); // visit ExpressionList to record MessageSends in there as well
         return null;
     }
 
@@ -259,7 +227,7 @@ public class FirstVisitor extends GJDepthFirst<String, ClassData>{
         // in case of an identifier, return the corresponding data type
         if(childNode == 3)
             return this.vars.get(node.f0.accept(this, null));
-        // in case of a 'this' pointer, return the name of this class
+        // in case of a 'this' pointer, the name of this class is the appropriate data type
         else if(childNode == 4)
             return this.className;
         // in case of an allocation or a bracket expression, actual data type will be passed up 
@@ -272,7 +240,7 @@ public class FirstVisitor extends GJDepthFirst<String, ClassData>{
     @CaseOfMessageSendOnly
     /*AllocationExpresion:  new f1 -> Identifier()() */
     public String visit(AllocationExpression node, ClassData data){
-        return node.f1.accept(this, null);
+        return node.f1.accept(this, null);  //return class name of new instance
     }
 
     @CaseOfMessageSendOnly

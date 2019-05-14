@@ -35,11 +35,11 @@ public class ClassData{
 
     public void setSize(){
         int size = 0;
-        Pair<Integer, String> typeInfo;
+        String type;
         if(this.vars.size() > 0){
             for(Map.Entry<String, Pair<String, Integer>> entry : this.vars.entrySet()){
-                typeInfo = ClassData.sizes.get(entry.getValue().getKey());
-                size += ClassData.sizes.containsKey(typeInfo) ? ClassData.sizes.get(typeInfo).getKey() : 1; 
+                type = entry.getValue().getKey();
+                size += ClassData.sizes.containsKey(type) ? ClassData.sizes.get(type).getKey() : 1; 
             }
         }
         this.size = size + ClassData.pointerSize;

@@ -118,8 +118,7 @@ public class Generatellvm extends GJNoArguDepthFirst<String>{
         node.f0.accept(this);
 
         // visit all user-defined classes 
-        for(int i = 0; i < node.f1.size(); i++)
-            node.f1.elementAt(i).accept(this);
+        node.f1.accept(this);
         return null; 
     }
 
@@ -133,12 +132,10 @@ public class Generatellvm extends GJNoArguDepthFirst<String>{
     public String visit(MainClass node){
         this.className = node.f1.accept(this);
         emit("define i32 @main() {");
-   		
-   		for (int i = 0; i < node.f14.size(); i++)
- 		   node.f14.elementAt(i).accept(this);
 
-   		for (int i = 0; i < node.f15.size(); i++)
-               node.f15.elementAt(i).accept(this);
+        // visit variable declarations and statements
+ 		node.f14.accept(this);
+        node.f15.accept(this);
         
         emit("\tret i32 0\n}\n");
    		return null;
@@ -162,8 +159,7 @@ public class Generatellvm extends GJNoArguDepthFirst<String>{
         this.className = node.f1.accept(this);
 
         // visit all member methods
-        for (int i = 0; i < node.f4.size(); i++)
-            node.f4.elementAt(i).accept(this);
+        node.f4.accept(this);
         return null;
     }
 
@@ -179,8 +175,7 @@ public class Generatellvm extends GJNoArguDepthFirst<String>{
         this.className = node.f1.accept(this);
 
         // visit all member methods
-        for (int i = 0; i < node.f6.size(); i++)
-            node.f6.elementAt(i).accept(this);
+        node.f6.accept(this);
         return null;
     }
 
@@ -227,12 +222,10 @@ public class Generatellvm extends GJNoArguDepthFirst<String>{
         }  
 
         // visit variable declarations
-        for (int i = 0; i < node.f7.size(); i++)
-            node.f7.elementAt(i).accept(this);
+        node.f7.accept(this);
         
         // visit statements 
-        for (int i = 0; i < node.f8.size(); i++)
-            node.f8.elementAt(i).accept(this);
+        node.f8.accept(this);
 
         emit("\tret " + node.f10.accept(this) + "\n}\n");  
         this.state.clear();
@@ -247,8 +240,7 @@ public class Generatellvm extends GJNoArguDepthFirst<String>{
 
     /*  Block: {( Statement() )*} */
     public String visit(Block node){
-        for (int i = 0; i < node.f1.size(); i++)
-            node.f1.elementAt(i).accept(this);
+        node.f1.accept(this);
         return null;
     }
 

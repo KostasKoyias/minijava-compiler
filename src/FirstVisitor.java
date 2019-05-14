@@ -86,7 +86,7 @@ public class FirstVisitor extends GJDepthFirst<String, ClassData>{
         cd.vars.putAll(cdParent.vars);
         cd.methods.putAll(cdParent.methods);
         this.nextVar = cdParent.getOffsetOfNextVar();
-        this.nextMethod = cd.methods.size() * ClassData.pointerSize;
+        this.nextMethod = cd.methods.size();
 
         /* pass ClassData to each field */
         node.f5.accept(this, cd);
@@ -145,10 +145,8 @@ public class FirstVisitor extends GJDepthFirst<String, ClassData>{
            other fields like return type or arguments do not need to be update it, mini-java does not support parametric polymorphism*/
         if(data.methods.containsKey(id))
             data.methods.put(id, new MethodData(this.className, type, data.methods.get(id).offset, args));
-        else{
-            data.methods.put(id, new MethodData(this.className, type, this.nextMethod, args));
-            this.nextMethod += ClassData.pointerSize;
-        }
+        else
+            data.methods.put(id, new MethodData(this.className, type, this.nextMethod++, args));
         return null;
     }
 

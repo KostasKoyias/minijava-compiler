@@ -26,9 +26,9 @@ public class Generatellvm extends GJNoArguDepthFirst<String>{
     // given a register or an integer add 1 to it because 1st place of an array is reserved for the length to be stored at, return the result
     private String getArrayIndex(String index){
 
-        // if a register was passed, add 1 to the it and store the result in a register who will be returned
+        // if a register was passed, add 1 to it and store the result in a register who will be returned
         if(index.startsWith("%")){
-            emit("\n\t" + this.state.newReg() + " = add i32 " + index + ", 1\n");
+            emit("\n\t" + this.state.newReg() + " = add i32 " + index + ", 1");
             return "%_" + (this.state.getRegCounter()-1);
         }
 
@@ -267,13 +267,14 @@ public class Generatellvm extends GJNoArguDepthFirst<String>{
         String leftID = node.f0.accept(this), leftInfo = this.getIdAddress(leftID), index = node.f2.accept(this).split(" ")[1], rightSide = node.f5.accept(this);
         
         // make sure array index is within bounds
-        this.checkArrayIndex(leftID, index, false);        
+        this.checkArrayIndex(leftInfo.split(" ")[1], index, false);   
+        index = this.getArrayIndex(index);     
 
         // load a pointer to the array, cast it to integer pointer, get it to point at the index-th element and modify it
         emit("\n\t;assign a value to the array element\n\t" + this.state.newReg() + " = load i8*, " + leftInfo + "\n\t"
             + this.state.newReg() + " = bitcast i8* %_" + (this.state.getRegCounter()-2) + " to i32*\n\t"
-            + this.state.newReg() + " = getelementptr i32, i32* %_" + (this.state.getRegCounter()-2) + " , i32 " + this.getArrayIndex(index)
-            + "\n\tstore " + rightSide +", i32* %_" + (this.state.getRegCounter()-1));
+            + this.state.newReg() + " = getelementptr i32, i32* %_" + (this.state.getRegCounter()-2) + " , i32 " + index
+            +"\n\tstore " + rightSide + ", i32* %_" + (this.state.getRegCounter()-1));
         return null;
     }
 
@@ -398,7 +399,7 @@ public class Generatellvm extends GJNoArguDepthFirst<String>{
 
         // get length of array
         if(!loaded){
-            emit("\n\t;load array\n\t" + this.state.newReg() + " = load i8*, i8** %" + id);
+            emit("\n\t;load array\n\t" + this.state.newReg() + " = load i8*, i8** " + id);
             len = this.getArrayElement("i8* %_" + (this.state.getRegCounter()-1), "0").split(" ")[1];
         }
         else 
@@ -409,7 +410,7 @@ public class Generatellvm extends GJNoArguDepthFirst<String>{
             +"\n\t" + this.state.newReg() + " = icmp slt i32 " + index + ", " + len
             +"\n\t" + this.state.newReg() + " = xor i1 %_" + (this.state.getRegCounter()-3) + ", %_" + (this.state.getRegCounter()-2)
             +"\n\tbr i1 %_" + (this.state.getRegCounter()-1) + ", label %" + label[1] + ", label %" + label[0] + "\n\n" + label[0]
-            +":\n\n\tcall void @throw_oob()\n\tbr label %" + label[1] + "\n\n" + label[1] + ":\n"); 
+            +":\n\n\tcall void @throw_oob()\n\tbr label %" + label[1] + "\n\n" + label[1] + ":"); 
     }
 
     /*ArrayLookup:  f0 -> PrimaryExpression() [f2 -> PrimaryExpression()] */

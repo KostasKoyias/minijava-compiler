@@ -58,7 +58,7 @@ public abstract class MyUtils{
             for(String par : params){
                 splitAt = par.indexOf(':');
                 if(splitAt != -1)
-                    rv.add(new Pair(par.substring(0, splitAt), par.substring(splitAt+1)));
+                    rv.add(new Pair<String, String>(par.substring(0, splitAt), par.substring(splitAt+1)));
             }
             return rv;
         }

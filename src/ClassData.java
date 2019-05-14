@@ -14,9 +14,9 @@ public class ClassData{
     private static final Map<String, Pair<Integer,String>> sizes = new LinkedHashMap<String, Pair<Integer,String>>() {
         private static final long serialVersionUID = 1L;
         {
-            put("boolean", new Pair(1, "i1"));
-            put("integer", new Pair(4, "i32"));
-            put("array", new Pair(8, "i8*"));
+            put("boolean", new Pair<Integer,String>(1, "i1"));
+            put("integer", new Pair<Integer,String>(4, "i32"));
+            put("array", new Pair<Integer,String>(8, "i8*"));
         }
     };
 
@@ -30,7 +30,7 @@ public class ClassData{
         if(ClassData.sizes.containsKey(type))
             return ClassData.sizes.get(type);
         else 
-            return new Pair(ClassData.pointerSize, "i8*");
+            return new Pair<Integer, String>(ClassData.pointerSize, "i8*");
     }
 
     public void setSize(){

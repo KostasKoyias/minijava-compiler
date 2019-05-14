@@ -37,7 +37,8 @@ public class FirstVisitor extends GJDepthFirst<String, ClassData>{
         this.className = node.f1.accept(this, null);
         ClassData cd = new ClassData(null);
         MethodData md = new MethodData(this.className, "void", 0, null);
- 		node.f14.accept(this, cd);
+        node.f14.accept(this, cd);
+        node.f15.accept(this, null); // info about MessageSend need to be collected on this pass
 
         cd.methods.put("main", md);
         this.classes.put(this.className, cd);
@@ -210,9 +211,10 @@ public class FirstVisitor extends GJDepthFirst<String, ClassData>{
     /*MessageSend
     * f0 -> PrimaryExpression().f2 -> Identifier()(f4 -> ( ExpressionList() )?) */
     public String visit(MessageSend node, ClassData data){
-        this.messageQueue.addLast(node.f0.accept(this, null));
+        String className = node.f0.accept(this, null);
+        this.messageQueue.addLast(className);
         node.f4.accept(this, null); // visit ExpressionList to record MessageSends in there as well
-        return null;
+        return className;           // return className because this node might be an inner/nested MessageSend
     }
 
     @CaseOfMessageSendOnly

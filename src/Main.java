@@ -49,9 +49,7 @@ class Main {
                     }  
                     
                 }
-                else 
-                    System.out.println("To view field and method offsets for each class rerun with --offsets");
-                
+
                 /* generate intermediate representation code */
                 fout = new BufferedWriter(new FileWriter(arg.replace("java", "ll")));
                 Generatellvm v1 = new Generatellvm(fout, v0.classes, v0.messageQueue);
@@ -77,5 +75,7 @@ class Main {
             }
 
         }
+        if(!displayOffsets)
+            System.out.println("To view field and method offsets for each class rerun with --offsets");
     }
 }

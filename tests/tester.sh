@@ -5,10 +5,11 @@ error_msg(){
     let fail++
 }
 
+# get absolute paths of build and test directories
 execPath=$(dirname $(find .. -name "Main.class"))
 cd $execPath
 execPath=$(pwd)
-testPath=$(find .. -name "in")
+testPath=$(dirname $(pwd)/$(find .. -name "in"))/in
 let fail=0
 let shouldFail=1  # OutOfBounds should fail
 

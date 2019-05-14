@@ -2,11 +2,11 @@ old
 build/*.class
 examples
 src/out
-src/Test.java
+src/Test*
 *.vscode
 *.ll
-!src/Test.ll
-src/*.class 
+build/*
+test/out/* 
 src/*~ 
 src/*Parse* 
 src/*Token* 

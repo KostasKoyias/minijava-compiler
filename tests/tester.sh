@@ -7,6 +7,7 @@ error_msg(){
 
 execPath=$(dirname $(find .. -name "Main.class"))
 cd $execPath
+execPath=$(pwd)
 testPath=$(find .. -name "in")
 let fail=0
 let shouldFail=1  # OutOfBounds should fail
@@ -47,11 +48,11 @@ do
     java $exe > out2
 
     # compare results
-    diff out1 out2 &> /dev/null
+    diff $execPath/out1 out2 &> /dev/null
     let exitCode=$?
     rm -f out2
-    cd ../$execPath
-    if [ $? -ne 0 ]
+    cd $execPath
+    if [ $exitCode -ne 0 ]
     then
         error_msg "\e[94mget same results\e[0m as javac" "for"
         continue 

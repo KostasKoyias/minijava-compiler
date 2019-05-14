@@ -9,7 +9,6 @@ public class State{
     private Map<String, IdInfo> ids; 
     private int regCounter;
     private Statement[] statements;
-    private static int statementsNumber = 3;
 
     // nested class IdInfo holding all information needed for a given identifier
     class IdInfo{
@@ -61,6 +60,7 @@ public class State{
             put("if", 0);
             put("while", 1);
             put("oob", 2);
+            put("and", 3);
         }
     }; 
 
@@ -68,10 +68,11 @@ public class State{
     State(){
         this.ids = new LinkedHashMap<String, IdInfo>();
         this.regCounter = 0;
-        this.statements = new Statement[State.statementsNumber];
+        this.statements = new Statement[State.labelTypes.size()];
         this.statements[0] = new Statement(new String[] {"if", "else", "fi"});
         this.statements[1] = new Statement(new String[] {"while", "do", "done"});
         this.statements[2] = new Statement(new String[] {"outOfBounds", "withinBounds"});
+        this.statements[3] = new Statement(new String[] {"true", "false", "end"});
     }
 
     // return next register available 
@@ -131,7 +132,7 @@ public class State{
     public void clear(){
         this.ids.clear();
         this.regCounter = 0;
-        for(int i = 0; i < State.statementsNumber; i++)
+        for(int i = 0; i < State.labelTypes.size(); i++)
             this.statements[i].resetCounter();
     }
 }

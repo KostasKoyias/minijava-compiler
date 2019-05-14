@@ -433,12 +433,7 @@ public class Generatellvm extends GJNoArguDepthFirst<String>{
         String[] rightInfo = right.split(" ");
         emit("\n\t;apply arithmetic expression\n"
            + "\t" + this.state.newReg() + " = " + op + " " + left + ", " + rightInfo[1]); 
-        return (op.equals("icmp slt") || op.equals("and") ? "i1" : "i32") + " %_" + (this.state.getRegCounter()-1);
-    }
-
-    /*AndExpression f0 -> Clause() &&  f2 -> Clause() */
-    public String visit(AndExpression node){
-        return arithmeticExpression(node.f0.accept(this), node.f2.accept(this), "and");   
+        return (op.equals("icmp slt") ? "i1" : "i32") + " %_" + (this.state.getRegCounter()-1);
     }
 
     /*CompareExpression
@@ -463,6 +458,19 @@ public class Generatellvm extends GJNoArguDepthFirst<String>{
     * f0 -> PrimaryExpression() * f2 -> PrimaryExpression() */
     public String visit(TimesExpression node){
         return arithmeticExpression(node.f0.accept(this), node.f2.accept(this), "mul");
+    }
+
+    /*AndExpression f0 -> Clause() &&  f2 -> Clause() */
+    public String visit(AndExpression node){
+        String leftReg = node.f0.accept(this), rightReg; // evaluate left side expression
+        String labels[] = this.state.newLabel("and");
+        emit("\t;short-circuit and clause, right side gets evaluated if and only if left side evaluates to true\n"
+            +"\tbr " + leftReg + ", label %" + labels[0] + ", label %" + labels[1] + "\n\n" + labels[0] +":\n\t"); 
+        rightReg = node.f2.accept(this); 
+        emit("\tbr label %" + labels[2] + "\n\n" + labels[1] + ":\n\n\tbr label %" + labels[2] + "\n\n" + labels[2] + ":\n\n" 
+            +"\t" + this.state.newReg() + " = phi i1 [" + rightReg.split(" ")[1] + ", %" + labels[0] + "],"
+            + "[" + leftReg.split(" ")[1] + ", %" + labels[1] + "]");
+        return "i1 %_" + (this.state.getRegCounter()-1);
     }
 
     /*Clause: f0 -> NotExpression() | PrimaryExpression() */

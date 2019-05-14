@@ -1,4 +1,4 @@
-class Test {
+class MyExample {
 	public static void main(String[] a) {
 		Base b;
 		Derived d;
@@ -50,7 +50,7 @@ class Derived extends Base {
 		a[2] = 11;      						// ArrayAssignment, parent inherited field
 
 		// if statement
-		if((false) && (!(this.printInt(99))))    // short-circuit, logical end code after && and line above should be all dead
+		if((false) && (!(this.printInt(99))))   // short-circuit, logical end code after && and line above should be all dead
 			System.out.println(999);			
 		else{	
 			System.out.println(a[2]);    	 	// array lookup

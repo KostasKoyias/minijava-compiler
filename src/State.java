@@ -6,24 +6,28 @@ import java.util.*;
 
 /* this class holds all information about the identifiers a method uses */
 public class State{
-    private Map<String, Info> ids; 
+    private Map<String, IdInfo> ids; 
     private int regCounter;
     private Statement[] statements;
     private static int statementsNumber = 3;
 
-    // nested class Info holding all info needed for a given identifier
-    class Info{
-        String reg;
+    // nested class IdInfo holding all information needed for a given identifier
+    class IdInfo{
+        String regAddress;
+        String regContent;
         String type;
-        boolean isLocal;
 
-        Info(String reg, String type, boolean isLocal){
-            this.reg = reg; this.type = type; this.isLocal = isLocal;
+        IdInfo(String regAddress, String regContent, String type){
+            this.regAddress = regAddress; this.regContent = regContent; this.type = type;
         }
 
-        public Info clone(){  
-            return new Info(this.reg, this.type, this.isLocal);  
+        public IdInfo clone(){  
+            return new IdInfo(this.regAddress, this.regContent, this.type);  
         }  
+
+        public void clear(){
+            this.regContent = null;
+        }
     }
 
     class Statement{
@@ -62,7 +66,7 @@ public class State{
 
     // Constructor: initialize identifier map and counters
     State(){
-        this.ids = new LinkedHashMap<String, Info>();
+        this.ids = new LinkedHashMap<String, IdInfo>();
         this.regCounter = 0;
         this.statements = new Statement[State.statementsNumber];
         this.statements[0] = new Statement(new String[] {"if", "else", "fi"});
@@ -70,30 +74,36 @@ public class State{
         this.statements[2] = new Statement(new String[] {"outOfBounds", "withinBounds"});
     }
 
-    // return next register available, update method's state by associating the identifier to the register, a data-type and a "is pointer" field  
+    // return next register available 
     public String newReg(){
         return "%_" + this.regCounter++;
     }
 
-    public String newReg(String id, String llvmType, boolean isLocal){
-	String regCurr = String.valueOf("%_" + this.regCounter), identifier = id == null ? regCurr : id;
-        this.put(identifier, regCurr, llvmType, isLocal);
+    // when an identifier is loaded/stored to a register update method's state by associating the identifier to that register 
+    public String newReg(String id, String llvmType, boolean isStore){
+        String regCurr = String.valueOf("%_" + this.regCounter);
+        
+        // if the content of an identifier was altered, regContent is outdated, so update regAddress only 
+        if(isStore)
+            this.ids.put(id, new IdInfo(regCurr, null, llvmType));
+        // else if an identifier was loaded, update regContent or insert a new registration because it was probably a field loaded
+        else{
+            if(this.ids.containsKey(id))
+                this.ids.get(id).regContent = regCurr;
+            else 
+                this.put(id, regCurr, null, llvmType);
+        }
         return this.newReg();
     }
 
     // insert information about a new identifier used by this method
-    public void put(String id, String reg, String type){
-        this.put(id, reg, type, true);
-    }
-
-    public void put(String id, String reg, String type, boolean isLocal){
-        Info info = new Info(reg, type, isLocal);
-        this.ids.put(id, info);
+    public void put(String id, String regAddress, String regContent, String llvmType){
+        this.ids.put(id, new IdInfo(regAddress, regContent, llvmType));
     }
 
     // get a new mutable version of all information about an identifier
-    public Info getInfo(String id){
-        return this.ids.containsKey(id) ? this.ids.get(id).clone() : null;
+    public IdInfo getIdInfo(String id){
+        return this.ids.containsKey(id) ? this.ids.get(id) : null;
     }
 
     // get just the type of an identifier

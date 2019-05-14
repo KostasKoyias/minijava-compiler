@@ -31,7 +31,6 @@ class Derived extends Base {
 	public int set(int x) {
 		int i;
 		i = 1;
-		System.out.println(x);
 
 		// while statement prints 1, 2, 3
 		while(i < 4){
@@ -39,6 +38,7 @@ class Derived extends Base {
 			i = i + 1;
 			x = x - 1;
 		}
+		System.out.println(x);
 		data =  x * 4;
 		return data;
 	}

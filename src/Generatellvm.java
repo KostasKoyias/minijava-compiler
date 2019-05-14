@@ -38,7 +38,7 @@ public class Generatellvm extends GJNoArguDepthFirst<String>{
     // given a field of a class, return a register holding either the address or the content of the field
     private String getField(String field, boolean wantContent){
         Pair<String, Integer> fieldInfo = this.data.get(this.className).vars.get(field);
-        String reg = this.state.newReg(field, "i8*", true), llvmType = ClassData.getSize(fieldInfo.getKey()).getValue(); 
+        String reg = this.state.newReg(field, "i8", true), llvmType = ClassData.getSize(fieldInfo.getKey()).getValue(); 
 
         // set a pointer to the field
         emit("\n\t;load " + (wantContent ? "field " : "address of ") + this.className + "." + field + " from memory" 
@@ -56,18 +56,17 @@ public class Generatellvm extends GJNoArguDepthFirst<String>{
 
     // given an identifier return a pair containing the register that holds the address of the id, and the type of the id
     private String getIdAddress(String id){
-        State.Info info = this.state.getInfo(id);
+        State.IdInfo info = this.state.getIdInfo(id);
 
         // if identifier is a field of this class
         if(info == null){
             this.getField(id, false);
-            info = this.state.getInfo(id);
+            info = this.state.getIdInfo(id);
         }
-        // else this identifier is already stored, get a register holding the ADDRESS of the identifier
-        else if(!info.isLocal)
-                info.reg = info.reg.replace("%.", "%");
-        info.type += "*";
-        return info.type + " " + info.reg;
+        // else clear content because it will be updated 
+        else
+            info.clear();
+        return info.type + "* " + info.regAddress;
     }
 
     // append a String in the file to be generated
@@ -188,7 +187,7 @@ public class Generatellvm extends GJNoArguDepthFirst<String>{
         // allocate space and store local variable
         String varType = ClassData.getSize(node.f0.accept(this)).getValue(), id = node.f1.accept(this);
         emit("\n\t;allocate space for local variable %" + id + "\n\t%" + id + " = alloca " + varType);
-        this.state.put(id, "%" + id, varType, true);
+        this.state.put(id, "%" + id, null, varType);
         return null;
     }
 
@@ -217,7 +216,7 @@ public class Generatellvm extends GJNoArguDepthFirst<String>{
                 llvmType = ClassData.getSize(par.getKey()).getValue();
                 emit("\t%" + paramID + " = alloca " + llvmType +
                      "\n\tstore " + llvmType + " %." + paramID + ", " + llvmType + "* %" + paramID);
-                this.state.put(paramID, "%." + paramID, llvmType, false);
+                this.state.put(paramID, "%" + paramID, "%." + paramID, llvmType);
             } 
         }  
 
@@ -472,25 +471,26 @@ public class Generatellvm extends GJNoArguDepthFirst<String>{
     | ThisExpression() | ArrayAllocationExpression() | AllocationExpression() | BracketExpression() */
     public String visit(PrimaryExpression node){
         String child = node.f0.accept(this);
-        State.Info id;
+        State.IdInfo id;
 
         // in case of an identifier, return a register holding the CONTENT of the id
         if (node.f0.which == 3 ){
-            id = this.state.getInfo(child);
+            id = this.state.getIdInfo(child);
 
             // if it is a field, load it to a register and return type and register after if statement
             if(id == null){
                 this.getField(child, true);
-                id = this.state.getInfo(child);
+                id = this.state.getIdInfo(child);
             }
-            // else if it is al local variable, there has been a previous allocation/store, so load the content and return 
-            else if(id.isLocal){
-                emit("\n\t;loading local variable\n\t" + this.state.newReg() + " = load " + id.type + ", " + id.type + "* " + id.reg);
+            // else if it is a local variable or a parameter, there has been a previous allocation/store, so load the content if it has been modified 
+            else if(id.regContent == null){
+                emit("\n\t;loading local variable '" +  child + "' from stack\n\t" 
+                     + this.state.newReg(child, id.type, false) + " = load " + id.type + ", " + id.type + "* " + id.regAddress);
                 return id.type + " %_" + (this.state.getRegCounter()-1);
             }
 
-            // else it is a parameter or an already loaded variable, so return it as it is, no need to load
-            return id.type + " " + id.reg;
+            // either way return content
+            return id.type + " " + id.regContent;
         }
 
         // else return type and value all in one

@@ -1,9 +1,5 @@
 import syntaxtree.*;
-import java.util.Map;
-import java.util.LinkedHashMap;
-import java.util.ArrayList;
-import java.util.Arrays;
-
+import java.util.*;
 import javafx.util.Pair;
 import java.io.*;
 
@@ -43,7 +39,7 @@ class Main {
                             System.out.println("\t\t" + name + "." + var.getKey() + ": " + var.getValue().getValue());
 
                         /* For each pointer to a member method, print offset */
-                        System.out.println("\n\tMethods\n\t-------\n");
+                        System.out.println("\n\tMethods\n\t-------");
                         for(Map.Entry<String, MethodData> func : entry.getValue().methods.entrySet())
                             System.out.println("\t\t" + func.getValue().className + "." + func.getKey() + ": " + func.getValue().offset);                       
                     }  
@@ -51,8 +47,8 @@ class Main {
                 }
 
                 /* generate intermediate representation code */
-                fout = new BufferedWriter(new FileWriter(arg.replace("java", "ll")));
-                Generatellvm v1 = new Generatellvm(fout, v0.classes, v0.messageQueue);
+                fout = new BufferedWriter(new FileWriter(arg.replace(".java", ".ll")));
+                Generatellvm v1 = new Generatellvm(fout, v0.classes, v0.messageQueue, v0.loopsQueue);
                 root.accept(v1);
             }
             /* handle exceptions */

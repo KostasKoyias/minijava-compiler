@@ -1,19 +1,18 @@
-import java.util.Map;
+import java.util.*;
 import javafx.util.Pair;
-import java.util.ArrayList;
-import java.util.LinkedHashMap; 
-import java.util.LinkedList; 
-import java.util.Queue;
 import visitor.GJDepthFirst;
 import syntaxtree.*;
 @interface CaseOfMessageSendOnly{};
+@interface CaseOfWhileLoopOnly{};
 
 public class FirstVisitor extends GJDepthFirst<String, ClassData>{
 
     /* use a map list storing (class_name, meta_data) pairs */
     protected Map <String, ClassData> classes;
     protected Map <String, String> vars;
-    protected LinkedList<String> messageQueue;
+    protected LinkedList<String> messageQueue;         // hold object type of each MessageSend
+    protected LinkedList<Set<String>> loopsQueue; // for each loop, hold all loop-modified variables
+    protected Set<String> loopTable;
     private Integer nextVar, nextMethod;
     private String className;
 
@@ -21,6 +20,8 @@ public class FirstVisitor extends GJDepthFirst<String, ClassData>{
     public FirstVisitor(){
         this.classes = new LinkedHashMap<String, ClassData>();
         this.messageQueue = new LinkedList<String>();
+        this.loopsQueue = new LinkedList<Set<String>>();
+        this.loopTable = null;
         this.vars = new LinkedHashMap<String, String>();
         this.nextVar = new Integer(ClassData.pointerSize);
         this.nextMethod = new Integer(0);
@@ -138,7 +139,7 @@ public class FirstVisitor extends GJDepthFirst<String, ClassData>{
     	if (node.f4.present())
             args = MyUtils.getParams(node.f4.accept(this, null).split(","));
 
-        /* visit both all statement nodes and the expression of the return statement in order to detect any messages send*/
+        /* visit both all statement nodes and the return statement expression in order to detect any messages send*/
         node.f8.accept(this, null);
         node.f10.accept(this, null);
 
@@ -195,6 +196,26 @@ public class FirstVisitor extends GJDepthFirst<String, ClassData>{
         return node.f0.toString();
     }
 
+    @CaseOfWhileLoopOnly
+    /*WhileStatement
+    * while( f2 -> Expression()) f4 -> Statement() */
+    public String visit(WhileStatement node, ClassData data){
+
+        // create loop table for AssignmentExpression node
+        this.loopTable = new HashSet<String>();
+        node.f2.accept(this, null);
+        node.f4.accept(this, null);
+
+        // push result to FIFO loop-queue
+        this.loopsQueue.addLast(this.loopTable);
+
+        // set loopTable to null for future assignments, until the next loop
+        this.loopTable = null;
+        return null;
+    }
+
+
+    @CaseOfWhileLoopOnly
     @CaseOfMessageSendOnly
     /*  Assignment Statement:   f0 -> Identifier() = f2 -> Expression(); */
     public String visit(AssignmentStatement node, ClassData data){ 
@@ -204,6 +225,10 @@ public class FirstVisitor extends GJDepthFirst<String, ClassData>{
            so adjust the variables table to reflect that, in order for the right method to be executed in case of a message send*/ 
         if(right != null)
             this.vars.put(left, right);
+
+        /* in case we are in a loop mark the identifier on the left as modified */
+        if(this.loopTable != null)
+            loopTable.add(left);  
         return null;
     }
 

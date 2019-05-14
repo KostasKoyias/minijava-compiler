@@ -1,25 +1,26 @@
 import java.io.*;
 import syntaxtree.*;
 import javafx.util.Pair;
-import java.util.LinkedList; 
-import java.util.Queue;
-import java.util.LinkedHashMap; 
+import java.util.*; 
 import visitor.GJNoArguDepthFirst;
-import java.util.*;
 
 public class Generatellvm extends GJNoArguDepthFirst<String>{
     private BufferedWriter out;
     protected Map<String, ClassData> data;
     private LinkedList<String> messageQueue;
+    private LinkedList<Set<String>> loopsQueue;
+    private Set<String> loopTable;
     private String className;
     private State state; 
 
     // Constructor: set a pointer to output file and set class data collected during the first pass
-    Generatellvm(BufferedWriter out, Map<String, ClassData> data, LinkedList<String> messageQueue){
+    Generatellvm(BufferedWriter out, Map<String, ClassData> data, LinkedList<String> messageQueue, LinkedList<Set<String>> loopsQueue){
         this.out = out;
         this.data = data;
         this.state = new State();
-        this.messageQueue = messageQueue;        
+        this.messageQueue = messageQueue;  
+        this.loopsQueue = loopsQueue;
+        this.loopTable = null;      
     }
 
     // given a register or an integer add 1 to it because 1st place of an array is reserved for the length to be stored at, return the result
@@ -297,20 +298,23 @@ public class Generatellvm extends GJNoArguDepthFirst<String>{
     }
 
     /*WhileStatement
-    * while( f2 -> Expression())
-    *       f4 -> Statement()
-    */
+    * while( f2 -> Expression()) f4 -> Statement() */
     public String visit(WhileStatement node){
         
-        // get a set of while labels and load
+        // get a set of while labels
         String[] whileLabel = this.state.newLabel("while");
         String condition;
+
+        // set loopTable so that primary expressions on assignment nodes right side can determine whether they need to load or not
+        this.loopTable = this.loopsQueue.removeFirst();
 
         emit("\n\t;while statement\n\tbr label %" + whileLabel[0] + "\n\n" + whileLabel[0] + ":");
         condition = node.f2.accept(this); 
         emit("\tbr " + condition + " ,label %" + whileLabel[1] + ", label %" + whileLabel[2] + "\n\n" + whileLabel[1] + ":");
         node.f4.accept(this);
         emit("\n\tbr label %" + whileLabel[0] + "\n" + whileLabel[2] + ":\n");
+
+        this.loopTable = null;
         return condition;
     }
 
@@ -482,8 +486,9 @@ public class Generatellvm extends GJNoArguDepthFirst<String>{
                 this.getField(child, true);
                 id = this.state.getIdInfo(child);
             }
-            // else if it is a local variable or a parameter, there has been a previous allocation/store, so load the content if it has been modified 
-            else if(id.regContent == null){
+            // else if it is a local variable or a parameter, there has been a previous allocation/store, 
+            // so load the content if it has been modified, also load in case of a loop-modified variable 
+            else if(id.regContent == null || (this.loopTable != null && this.loopTable.contains(child))){
                 emit("\n\t;loading local variable '" +  child + "' from stack\n\t" 
                      + this.state.newReg(child, id.type, false) + " = load " + id.type + ", " + id.type + "* " + id.regAddress);
                 return id.type + " %_" + (this.state.getRegCounter()-1);

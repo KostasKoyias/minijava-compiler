@@ -65,7 +65,7 @@ printf "\n\e[1mEnd result: "
 notExpected=$(($fail-$shouldFail))
 if [ $notExpected -ne 0 ]
 then 
-    echo -e "\e[31mFailure (got unexpected results for $notExpected files)\e[0m"
+    echo -e "\e[31mFailure\e[0m (got unexpected results for $notExpected files)"
 else 
     echo -e "\e[32mSuccess\e[0m"
 fi

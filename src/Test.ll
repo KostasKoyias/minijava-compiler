@@ -76,30 +76,36 @@ while_0:
 
 do_0:
 
+	;loading local variable 'i' from stack
+	%_12 = load i32, i32* %i
+
 	;display an integer at stdout
-	call void (i32) @print_int(i32 %_10)
+	call void (i32) @print_int(i32 %_12)
+
+	;loading local variable 'i' from stack
+	%_13 = load i32, i32* %i
 
 	;apply arithmetic expression
-	%_12 = add i32 %_10, 1
+	%_14 = add i32 %_13, 1
 
 	;store result
-	store i32 %_12, i32* %i
+	store i32 %_14, i32* %i
+
+	;loading local variable 'x' from stack
+	%_15 = load i32, i32* %x
 
 	;apply arithmetic expression
-	%_13 = sub i32 %.x, 1
+	%_16 = sub i32 %_15, 1
 
 	;store result
-	store i32 %_13, i32* %x
+	store i32 %_16, i32* %x
 
 	br label %while_0
 done_0:
 
 
 	;loading local variable 'x' from stack
-	%_14 = load i32, i32* %x
-
-	;display an integer at stdout
-	call void (i32) @print_int(i32 %_14)
-	ret i32 %_14
+	%_17 = load i32, i32* %x
+	ret i32 %_17
 }
 

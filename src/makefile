@@ -4,4 +4,4 @@ all:
 	javac Main.java -d ../build -Xlint:unchecked
 
 clean:
-	rm -rf ../build/*
+	rm -rf ../build/* *Parse* syntaxtree visitor *Token* minijava-jtb.jj JavaCharStream.java

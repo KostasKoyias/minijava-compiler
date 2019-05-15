@@ -217,7 +217,7 @@ public class FirstVisitor extends GJDepthFirst<String, ClassData>{
 
     @CaseOfWhileLoopOnly
     @CaseOfMessageSendOnly
-    /*  Assignment Statement:   f0 -> Identifier() = f2 -> Expression(); */
+    /*  AssignmentStatement:   f0 -> Identifier() = f2 -> Expression(); */
     public String visit(AssignmentStatement node, ClassData data){ 
         String left = node.f0.accept(this, null), right = node.f2.accept(this, null);
 

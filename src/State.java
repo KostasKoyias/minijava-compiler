@@ -18,10 +18,6 @@ public class State{
 
         IdInfo(String regAddress, String regContent, String type){
             this.regAddress = regAddress; this.regContent = regContent; this.type = type;
-        }
-
-        public IdInfo clone(){  
-            return new IdInfo(this.regAddress, this.regContent, this.type);  
         }  
 
         public void clear(){
@@ -105,14 +101,6 @@ public class State{
     // get a new mutable version of all information about an identifier
     public IdInfo getIdInfo(String id){
         return this.ids.containsKey(id) ? this.ids.get(id) : null;
-    }
-
-    // get just the type of an identifier
-    public String getType(String id){
-        if(this.ids.containsKey(id))
-            return this.ids.get(id).type;
-        else 
-            return null;
     }
 
     public int getRegCounter(){

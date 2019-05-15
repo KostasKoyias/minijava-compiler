@@ -62,18 +62,6 @@ public abstract class MyUtils{
             }
             return rv;
         }
-          
-        public static Pair<String, String> getReg(ArrayList<Pair<String, String>> list, String key){
-            String item;
-            if(list != null){
-                for(int i = 0; i < list.size(); i++){
-                    item = list.get(i).getKey();
-                    if(item.equals("%" + key) || item.equals("%." + key))
-                        return list.get(i);
-                }
-            }
-            return null;
-        }
 
         // get argument list in of form (type_0 arg0, ..., type_n arg_n) and filter it, so that it gets the form of (type_0, ..., type_n)
         public static String filterSignature(String signature, String classPointer){

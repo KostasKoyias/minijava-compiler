@@ -14,3 +14,6 @@ src/*jtb*
 src/*CharStream*
 src/visitor 
 src/syntaxtree
+ll_examples
+update.sh
+MiniJava-Compiler*

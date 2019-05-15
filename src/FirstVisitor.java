@@ -201,16 +201,21 @@ public class FirstVisitor extends GJDepthFirst<String, ClassData>{
     * while( f2 -> Expression()) f4 -> Statement() */
     public String visit(WhileStatement node, ClassData data){
 
-        // create loop table for AssignmentExpression node
-        this.loopTable = new HashSet<String>();
+        boolean isOuterLoop = (this.loopTable == null);
+
+        /*  if this is an outer loop create loop table for AssignmentExpression node and all subsequent inner loops 
+            else this is an inner loop, so loop table is shared with the outer ones */
+        if(isOuterLoop)
+            this.loopTable = new HashSet<String>();
         node.f2.accept(this, null);
         node.f4.accept(this, null);
 
-        // push result to FIFO loop-queue
-        this.loopsQueue.addLast(this.loopTable);
-
-        // set loopTable to null for future assignments, until the next loop
-        this.loopTable = null;
+        /*  push result to FIFO loop-queue, set loopTable to null for future assignments, until the next loop
+            but only if this is an outer loop, else it is shared with the inner ones */
+        if(isOuterLoop){
+            this.loopsQueue.addLast(this.loopTable);
+            this.loopTable = null;
+        }
         return null;
     }
 

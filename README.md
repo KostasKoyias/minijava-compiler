@@ -1,6 +1,6 @@
 # MiniJava-Compiler
 
-## Goal
+## Introduction
 
 This compiler aims to generate intermediate code used by the [LLVM](https://llvm.org/docs/LangRef.html#instruction-reference) compiler for a series of
 [MiniJava](http://cgi.di.uoa.gr/~thp06/project_files/minijava-new/minijava.html), a pure subset of Java,  input files. To accomplish that, two visitors
@@ -52,7 +52,8 @@ an instance of B to a variable that refers to an A.
 
 In order to minimize loading, a once loaded identifier was not re-loaded until modified.
 To accomplish that, a map was used for each method associating each identifier <sup>1</sup> to a pair of registers.
-First of them, holding the address and the other holding the content.  
+First of them, holding the address and the other holding the content.
+
 In case of an assignment, right side identifier was only loaded if it was either modified
 or registerContent was empty. Left side identifier, cleared his own registerContent
 after that.  
@@ -62,7 +63,7 @@ after that.
 * local variable or
 * a class field
 
-#### While loop
+#### While loops
 
 As you might just thought, some extra info need to be collected about a while loop to avoid
 using the same content for an loop-modified variable. For example
@@ -80,12 +81,17 @@ in the above code x is loaded to be assigned to y. Then, in order to assign x + 
 one might think that content is already loaded because of the previous assignment.
 Well, that one would only be right in case the loop was executed just once.
 But, this is usually not the case with loops, so each loop-modified variable
-is re-loaded. Or else, x would be assigned 1 + 5 in all 5 loops.
+is re-loaded. Or else, x would be assigned 0 + 5 in all 5 loops.
+
 To detect loop-modified variables, a FIFO queue was used during the first pass,
-containing a single loopTable(HashSet) for each loop.  
-This was initialized by
+containing a single loopTable(HashSet) for each outermost loop.
+This was initialized by the outer
 [WhileStatement](http://cgi.di.uoa.gr/~thp06/project_files/minijava-new/minijava.html#prod22)
 and updated by [AssignmentStatement](http://cgi.di.uoa.gr/~thp06/project_files/minijava-new/minijava.html#prod19).
+Notice that each outer loop, actually shares the same loop-modified table with all nested loops
+inside of it. This holds, just because in MiniJava each function opens up a new scope,
+and all variables are declared in the beginning of it, so all loops actually share the same variables.  
+Check out *tests/in/NestedLoops.java* example to fully understand this.
 
 ### Array outOfBounds check
 

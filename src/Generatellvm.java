@@ -305,9 +305,12 @@ public class Generatellvm extends GJNoArguDepthFirst<String>{
         // get a set of while labels
         String[] whileLabel = this.state.newLabel("while");
         String condition;
+        boolean isOuterLoop = (this.loopTable == null);
 
         // set loopTable so that primary expressions on assignment nodes right side can determine whether they need to load or not
-        this.loopTable = this.loopsQueue.removeFirst();
+        // nested loops share this table with their parents, so only pop when loopTable is empty, i.e this is a very outer loop
+        if(isOuterLoop)
+            this.loopTable = this.loopsQueue.removeFirst();
 
         emit("\n\t;while statement\n\tbr label %" + whileLabel[0] + "\n\n" + whileLabel[0] + ":");
         condition = node.f2.accept(this); 
@@ -315,7 +318,9 @@ public class Generatellvm extends GJNoArguDepthFirst<String>{
         node.f4.accept(this);
         emit("\n\tbr label %" + whileLabel[0] + "\n" + whileLabel[2] + ":\n");
 
-        this.loopTable = null;
+        // if this is a very outer loop, clear up loop table
+        if(isOuterLoop)
+            this.loopTable = null;
         return condition;
     }
 

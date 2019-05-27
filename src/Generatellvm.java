@@ -107,12 +107,26 @@ public class Generatellvm extends GJNoArguDepthFirst<String>{
             +    "\tcall i32 (i8*, ...) @printf(i8* %_str, i32 %i)\n"
             +    "\tret void\n}\n\n"
             
-            
             + "define void @throw_oob() {\n"
             +    "\t%_str = bitcast [15 x i8]* @_cOOB to i8*\n"
             +    "\tcall i32 (i8*, ...) @printf(i8* %_str)\n"
             +    "\tcall void @exit(i32 1)\n"
-            +    "\tret void\n}\n");
+            +    "\tret void\n}\n\n"
+            + "@_ctrue = constant [6 x i8] c\"true\\0a\\00\"\n"
+            + "@_cfalse = constant [7 x i8] c\"false\\0a\\00\"\n"
+
+            + "define void @print_bool(i1 %i){\n"
+            +  "\tbr i1 %i, label %is_true, label %is_false\n\n"
+            + "is_true:\n"
+            +   "\t%_res_true = bitcast [6 x i8]* @_ctrue to i8*\n"
+            +   "\tbr label %result\n\n"
+            + "is_false:\n"
+            +   "\t%_res_false = bitcast [7 x i8]* @_cfalse to i8*\n"
+            +   "\tbr label %result\n\n"
+            + "result:\n"
+            +   "\t%_res = phi i8* [%_res_true, %is_true], [%_res_false, %is_false]\n" 
+            +   "\tcall i32 (i8*, ...) @printf(i8* %_res)\n"
+            +   "\tret void\n}\n");
         
         // visit main
         node.f0.accept(this);
@@ -326,8 +340,9 @@ public class Generatellvm extends GJNoArguDepthFirst<String>{
 
     /*Print Statement: System.out.println( f2 -> Expression());*/
 	public String visit(PrintStatement node){
-		String expr = node.f2.accept(this);
-		emit("\n\t;display an integer at stdout\n\tcall void (i32) @print_int(" + expr +")");
+        String expr = node.f2.accept(this), type = expr.split(" ")[0];
+
+		emit("\n\t;display an " + type + "\n\tcall void (" + type + ") @print_" + (type.equals("i1") ? "bool" : "int") + "(" + expr +")");
 		return null;
 	}
 

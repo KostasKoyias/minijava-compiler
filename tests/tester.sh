@@ -11,7 +11,7 @@ cd $execPath
 execPath=$(pwd)
 testPath=$(dirname $(pwd)/$(find .. -name "in"))/in
 let fail=0
-let shouldFail=1  # OutOfBounds should fail
+let shouldFail=2  # OutOfBounds should fail
 
 # for each test case/file
 for javaFile in $(ls $testPath)

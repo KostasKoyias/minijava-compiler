@@ -34,14 +34,14 @@ public class FirstVisitor extends GJDepthFirst<String, ClassData>{
                 f14 -> ( VarDeclaration() )*
                 f15 -> ( Statement() )* 
         } */
-    public String visit(MainClass node){
+    public String visit(MainClass node, ClassData data){
+
         this.className = node.f1.accept(this, null);
         ClassData cd = new ClassData(null);
         MethodData md = new MethodData(this.className, "void", 0, null);
         node.f14.accept(this, cd);
         node.f15.accept(this, null); // info about MessageSend need to be collected on this pass
 
-        cd.methods.put("main", md);
         this.classes.put(this.className, cd);
    		return null;
     }

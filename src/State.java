@@ -12,17 +12,12 @@ public class State{
 
     // nested class IdInfo holding all information needed for a given identifier
     class IdInfo{
-        String regAddress;
-        String regContent;
+        String register; // register holding the address of an identifier
         String type;
 
-        IdInfo(String regAddress, String regContent, String type){
-            this.regAddress = regAddress; this.regContent = regContent; this.type = type;
+        IdInfo(String register, String type){
+            this.register = register; this.type = type;
         }  
-
-        public void clear(){
-            this.regContent = null;
-        }
     }
 
     class Statement{
@@ -76,26 +71,17 @@ public class State{
         return "%_" + this.regCounter++;
     }
 
-    // when an identifier is loaded/stored to a register update method's state by associating the identifier to that register 
-    public String newReg(String id, String llvmType, boolean isStore){
-        String regCurr = String.valueOf("%_" + this.regCounter);
+    // associate an identifier with the register holding the address of the identifier
+    public String newReg(String id, String llvmType){
         
-        // if the content of an identifier was altered, regContent is outdated, so update regAddress only 
-        if(isStore)
-            this.ids.put(id, new IdInfo(regCurr, null, llvmType));
-        // else if an identifier was loaded, update regContent or insert a new registration because it was probably a field loaded
-        else{
-            if(this.ids.containsKey(id))
-                this.ids.get(id).regContent = regCurr;
-            else 
-                this.put(id, regCurr, null, llvmType);
-        }
+        // if the content of an identifier was altered, regContent is outdated, so update register only 
+        this.ids.put(id, new IdInfo(String.valueOf("%_" + this.regCounter), llvmType));
         return this.newReg();
     }
 
     // insert information about a new identifier used by this method
-    public void put(String id, String regAddress, String regContent, String llvmType){
-        this.ids.put(id, new IdInfo(regAddress, regContent, llvmType));
+    public void put(String id, String register, String llvmType){
+        this.ids.put(id, new IdInfo(register, llvmType));
     }
 
     // get a new mutable version of all information about an identifier

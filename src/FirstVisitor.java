@@ -3,7 +3,6 @@ import javafx.util.Pair;
 import visitor.GJDepthFirst;
 import syntaxtree.*;
 @interface CaseOfMessageSendOnly{};
-@interface CaseOfWhileLoopOnly{};
 
 public class FirstVisitor extends GJDepthFirst<String, ClassData>{
 
@@ -11,8 +10,6 @@ public class FirstVisitor extends GJDepthFirst<String, ClassData>{
     protected Map <String, ClassData> classes;
     protected Map <String, String> vars;
     protected LinkedList<String> messageQueue;         // hold object type of each MessageSend
-    protected LinkedList<Set<String>> loopsQueue; // for each loop, hold all loop-modified variables
-    protected Set<String> loopTable;
     private Integer nextVar, nextMethod;
     private String className;
 
@@ -20,8 +17,6 @@ public class FirstVisitor extends GJDepthFirst<String, ClassData>{
     public FirstVisitor(){
         this.classes = new LinkedHashMap<String, ClassData>();
         this.messageQueue = new LinkedList<String>();
-        this.loopsQueue = new LinkedList<Set<String>>();
-        this.loopTable = null;
         this.vars = new LinkedHashMap<String, String>();
         this.nextVar = new Integer(ClassData.pointerSize);
         this.nextMethod = new Integer(0);
@@ -196,31 +191,6 @@ public class FirstVisitor extends GJDepthFirst<String, ClassData>{
         return node.f0.toString();
     }
 
-    @CaseOfWhileLoopOnly
-    /*WhileStatement
-    * while( f2 -> Expression()) f4 -> Statement() */
-    public String visit(WhileStatement node, ClassData data){
-
-        boolean isOuterLoop = (this.loopTable == null);
-
-        /*  if this is an outer loop create loop table for AssignmentExpression node and all subsequent inner loops 
-            else this is an inner loop, so loop table is shared with the outer ones */
-        if(isOuterLoop)
-            this.loopTable = new HashSet<String>();
-        node.f2.accept(this, null);
-        node.f4.accept(this, null);
-
-        /*  push result to FIFO loop-queue, set loopTable to null for future assignments, until the next loop
-            but only if this is an outer loop, else it is shared with the inner ones */
-        if(isOuterLoop){
-            this.loopsQueue.addLast(this.loopTable);
-            this.loopTable = null;
-        }
-        return null;
-    }
-
-
-    @CaseOfWhileLoopOnly
     @CaseOfMessageSendOnly
     /*  AssignmentStatement:   f0 -> Identifier() = f2 -> Expression(); */
     public String visit(AssignmentStatement node, ClassData data){ 
@@ -231,9 +201,6 @@ public class FirstVisitor extends GJDepthFirst<String, ClassData>{
         if(right != null)
             this.vars.put(left, right);
 
-        /* in case we are in a loop mark the identifier on the left as modified */
-        if(this.loopTable != null)
-            loopTable.add(left);  
         return null;
     }
 

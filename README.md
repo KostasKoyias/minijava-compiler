@@ -48,51 +48,6 @@ and MiniJava happens to support strong behavioral subtyping. This node takes car
 by updating the fields map of the class during the first pass in case of assigning
 an instance of B to a variable that refers to an A.
 
-### Load once, use many
-
-In order to minimize loading, a once loaded identifier was not re-loaded until modified.
-To accomplish that, a map was used for each method associating each identifier <sup>1</sup> to a pair of registers.
-First of them, holding the address and the other holding the content.
-
-In case of an assignment, right side identifier was only loaded if it was either modified
-or registerContent was empty. Left side identifier, cleared his own registerContent
-after that.  
-<sup>1</sup> This could be a:
-
-* parameter
-* local variable or
-* a class field
-
-#### While loops
-
-As you might just thought, some extra info need to be collected about a while loop to avoid
-using the same content for an loop-modified variable. For example
-
-```java
-x = 0;
-y = x;
-while(y < 5){
-    y = y + 1;
-    x = x + 5;    // load or not?
-}
-```
-
-in the above code x is loaded to be assigned to y. Then, in order to assign x + 1 to x,
-one might think that content is already loaded because of the previous assignment.
-Well, that one would only be right in case the loop was executed just once.
-But, this is usually not the case with loops, so each loop-modified variable
-is re-loaded. Or else, x would be assigned 0 + 5 in all 5 loops.
-
-To detect loop-modified variables, a FIFO queue was used during the first pass,
-containing a single loopTable(HashSet) for each outermost loop.
-This was initialized by the outer
-[WhileStatement](http://cgi.di.uoa.gr/~thp06/project_files/minijava-new/minijava.html#prod22)
-and updated by [AssignmentStatement](http://cgi.di.uoa.gr/~thp06/project_files/minijava-new/minijava.html#prod19).
-Notice that each outer loop, actually shares the same loop-modified table with all nested loops
-inside of it. This holds, just because in MiniJava each function opens up a new scope,
-and all variables are declared in the beginning of it, so all loops actually share the same variables.  
-Check out *tests/in/NestedLoops.java* example to fully understand this.
-
 ### Array outOfBounds check
 
 When it comes to arrays, intermediate code always makes sure an array index
@@ -121,11 +76,11 @@ In order to compile MiniJava files one needs Clang with version >= 4.0.0.
 This can be installed, in Ubuntu Trusty as follows:
 
 ```bash
-sudo apt update && sudo apt install clang-4.0
+sudo apt update && sudo apt install clang-6.0
 ```
 
-Then, after compiling the compiler(yeah I know), using the makefile under src directory
-produce intermediate code running Main.class under build directory. For example
+Then, after compiling the compiler(yeah I know) using the makefile under src directory
+, produce intermediate code for any MiniJava source file by running Main.class under build directory. For example
 
 ``` bash
 MiniJava-Compiler $ cd src
@@ -162,6 +117,10 @@ Of course a pretty cool test script was added, written in bash. One can find it 
 It generates, compiles and runs intermediate code for each .java file under *tests/in*.
 A complete example highlighting all properties of MiniJava-Compiler is the one name *MyExample.java*.
 Another interesting one is *OutOfBounds.java* which verifies that the array index check mentioned above
-actually works. Run it from any directory of level 1(src, tests or build).
+actually works by failing at execution. Run it from any directory of level 1(src, tests or build) as follows:
 
-So that is it, hopefully I made things clear.  
+```bash
+MiniJava-Compiler/tests $ ./tester.sh
+```
+
+So this is it, hopefully I made things clear.  

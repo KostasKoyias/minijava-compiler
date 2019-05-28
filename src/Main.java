@@ -48,7 +48,7 @@ class Main {
 
                 /* generate intermediate representation code */
                 fout = new BufferedWriter(new FileWriter(arg.replace(".java", ".ll")));
-                Generatellvm v1 = new Generatellvm(fout, v0.classes, v0.messageQueue, v0.loopsQueue);
+                Generatellvm v1 = new Generatellvm(fout, v0.classes, v0.messageQueue);
                 root.accept(v1);
             }
             /* handle exceptions */

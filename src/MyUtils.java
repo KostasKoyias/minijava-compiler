@@ -43,7 +43,7 @@ public abstract class MyUtils{
             Map<String, MethodData> methods;
 
             // for each class, declare a global vTable in the .ll file
-	    obj.emit(";for each class, declare a global vTable containing a pointer for each method");
+	        obj.emit(";for each class, declare a global vTable containing a pointer for each method");
             for(Map.Entry<String, ClassData> entry : obj.data.entrySet()){
                 className = entry.getKey();
                 methods = entry.getValue().methods;

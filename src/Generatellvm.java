@@ -8,19 +8,16 @@ public class Generatellvm extends GJNoArguDepthFirst<String>{
     private BufferedWriter out;
     protected Map<String, ClassData> data;
     private LinkedList<String> messageQueue;
-    private LinkedList<Set<String>> loopsQueue;
-    private Set<String> loopTable;
     private String className;
     private State state; 
+    private boolean inIfStatement;
 
     // Constructor: set a pointer to output file and set class data collected during the first pass
-    Generatellvm(BufferedWriter out, Map<String, ClassData> data, LinkedList<String> messageQueue, LinkedList<Set<String>> loopsQueue){
+    Generatellvm(BufferedWriter out, Map<String, ClassData> data, LinkedList<String> messageQueue){
         this.out = out;
         this.data = data;
         this.state = new State();
         this.messageQueue = messageQueue;  
-        this.loopsQueue = loopsQueue;
-        this.loopTable = null;      
     }
 
     // given a register or an integer add 1 to it because 1st place of an array is reserved for the length to be stored at, return the result
@@ -36,10 +33,11 @@ public class Generatellvm extends GJNoArguDepthFirst<String>{
         return String.valueOf(Integer.parseInt(index) + 1);
     }
 
-    // given a field of a class, return a register holding either the address or the content of the field
+    // given a field of a class, return a register holding the address of that field
+    // fields need to always get re-loaded because of while loops and if statements where we need the most recent value in each case possible
     private String getField(String field, boolean wantContent){
         Pair<String, Integer> fieldInfo = this.data.get(this.className).vars.get(field);
-        String reg = this.state.newReg(field, "i8", true), llvmType = ClassData.getSize(fieldInfo.getKey()).getValue(); 
+        String reg = this.state.newReg(), llvmType = ClassData.getSize(fieldInfo.getKey()).getValue(); 
 
         // set a pointer to the field
         emit("\n\t;load " + (wantContent ? "field " : "address of ") + this.className + "." + field + " from memory" 
@@ -47,27 +45,21 @@ public class Generatellvm extends GJNoArguDepthFirst<String>{
 
         // cast field pointer to actual size of field if it it is different than i8
         if(!"i8".equals(llvmType))
-            emit("\t" + this.state.newReg(field, llvmType, true) + " = bitcast i8* " + reg + " to " + llvmType + "*");
+            emit("\t" + this.state.newReg() + " = bitcast i8* " + reg + " to " + llvmType + "*");
 
         // if the actual content of the field was requested, load it to a register that will be returned 
         if(wantContent)
-            emit("\t" + this.state.newReg(field, llvmType, false) + " = load " + llvmType + ", " + llvmType + "* " + ("%_" + (this.state.getRegCounter()-2)));
-        return "%_" + (this.state.getRegCounter()-1);
+            emit("\t" + this.state.newReg() + " = load " + llvmType + ", " + llvmType + "* " + ("%_" + (this.state.getRegCounter()-2)));
+        return llvmType + (wantContent ? " " : "* ")  + "%_" + (this.state.getRegCounter()-1);
     }
 
     // given an identifier return a pair containing the register that holds the address of the id, and the type of the id
     private String getIdAddress(String id){
         State.IdInfo info = this.state.getIdInfo(id);
 
-        // if identifier is a field of this class
-        if(info == null){
-            this.getField(id, false);
-            info = this.state.getIdInfo(id);
-        }
-        // else clear content because it will be updated 
-        else
-            info.clear();
-        return info.type + "* " + info.regAddress;
+        // if identifier is a field of this class, load the address of that field on a brand new register
+        // else there is already a register holding the address of the identifier, either way return a register holding the address of the id 
+        return (info == null) ? this.getField(id, false) : info.type + "* " + info.register;
     }
 
     // append a String in the file to be generated
@@ -202,7 +194,7 @@ public class Generatellvm extends GJNoArguDepthFirst<String>{
         // allocate space and store local variable
         String varType = ClassData.getSize(node.f0.accept(this)).getValue(), id = node.f1.accept(this);
         emit("\n\t;allocate space for local variable %" + id + "\n\t%" + id + " = alloca " + varType);
-        this.state.put(id, "%" + id, null, varType);
+        this.state.put(id, "%" + id, varType); // keep track of the register holding that address
         return null;
     }
 
@@ -222,7 +214,7 @@ public class Generatellvm extends GJNoArguDepthFirst<String>{
         ArrayList<Pair<String, String>> parameters = this.data.get(this.className).methods.get(id).arguments;
         emit(";" + this.className + "." + id  + "\ndefine " + returnType + " @" + this.className + "." + id + MyUtils.getArgs(parameters, true) + "{");	  
         
-        // allocate space and store each parameter of the method
+        // allocate space and store each parameter of the method, associate each parameter with a register holding the parameter's address 
         String llvmType, paramID;
         if(parameters != null){
             emit("\t;allocate space and store each parameter of the method");
@@ -231,7 +223,7 @@ public class Generatellvm extends GJNoArguDepthFirst<String>{
                 llvmType = ClassData.getSize(par.getKey()).getValue();
                 emit("\t%" + paramID + " = alloca " + llvmType +
                      "\n\tstore " + llvmType + " %." + paramID + ", " + llvmType + "* %" + paramID);
-                this.state.put(paramID, "%" + paramID, "%." + paramID, llvmType);
+                this.state.put(paramID, "%" + paramID, llvmType);
             } 
         }  
 
@@ -304,11 +296,14 @@ public class Generatellvm extends GJNoArguDepthFirst<String>{
         String[] ifLabel = this.state.newLabel("if");
         String condition = node.f2.accept(this), brEnd = "\tbr label %" + ifLabel[2] + "\n\n";
 
+        this.inIfStatement = true;
         emit("\n\t;if statement\n\tbr " + condition + " ,label %" + ifLabel[0] + ", label %" + ifLabel[1] +"\n\n" + ifLabel[0] + ":");
         node.f4.accept(this);
         emit(brEnd + ifLabel[1] + ":");
         node.f6.accept(this);
         emit(brEnd + ifLabel[2] + ":");
+        this.inIfStatement = false;
+
         return null;
     }
 
@@ -319,12 +314,6 @@ public class Generatellvm extends GJNoArguDepthFirst<String>{
         // get a set of while labels
         String[] whileLabel = this.state.newLabel("while");
         String condition;
-        boolean isOuterLoop = (this.loopTable == null);
-
-        // set loopTable so that primary expressions on assignment nodes right side can determine whether they need to load or not
-        // nested loops share this table with their parents, so only pop when loopTable is empty, i.e this is a very outer loop
-        if(isOuterLoop)
-            this.loopTable = this.loopsQueue.removeFirst();
 
         emit("\n\t;while statement\n\tbr label %" + whileLabel[0] + "\n\n" + whileLabel[0] + ":");
         condition = node.f2.accept(this); 
@@ -332,9 +321,6 @@ public class Generatellvm extends GJNoArguDepthFirst<String>{
         node.f4.accept(this);
         emit("\n\tbr label %" + whileLabel[0] + "\n" + whileLabel[2] + ":\n");
 
-        // if this is a very outer loop, clear up loop table
-        if(isOuterLoop)
-            this.loopTable = null;
         return condition;
     }
 
@@ -510,21 +496,15 @@ public class Generatellvm extends GJNoArguDepthFirst<String>{
         if (node.f0.which == 3 ){
             id = this.state.getIdInfo(child);
 
-            // if it is a field, load it to a register and return type and register after if statement
-            if(id == null){
-                this.getField(child, true);
-                id = this.state.getIdInfo(child);
-            }
-            // else if it is a local variable or a parameter, there has been a previous allocation/store, 
-            // so load the content if it has been modified, also load in case of a loop-modified variable 
-            else if(id.regContent == null || (this.loopTable != null && this.loopTable.contains(child))){
-                emit("\n\t;loading local variable '" +  child + "' from stack\n\t" 
-                     + this.state.newReg(child, id.type, false) + " = load " + id.type + ", " + id.type + "* " + id.regAddress);
-                return id.type + " %_" + (this.state.getRegCounter()-1);
-            }
+            // if it is a field, load it to a register and return
+            if(id == null)
+                return this.getField(child, true);
 
-            // either way return content
-            return id.type + " " + id.regContent;
+            // else if it is a local variable or a parameter, there has been a previous allocation/store, 
+            emit("\n\t;loading local variable '" +  child + "' from stack\n\t" 
+                    + this.state.newReg() + " = load " + id.type + ", " + id.type + "* " + id.register);
+            return id.type + " %_" + (this.state.getRegCounter()-1);
+
         }
 
         // else return type and value all in one

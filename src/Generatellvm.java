@@ -10,6 +10,7 @@ public class Generatellvm extends GJNoArguDepthFirst<String>{
     private LinkedList<String> messageQueue;
     private String className;
     private State state; 
+    private boolean inIfStatement;
 
     // Constructor: set a pointer to output file and set class data collected during the first pass
     Generatellvm(BufferedWriter out, Map<String, ClassData> data, LinkedList<String> messageQueue){

@@ -28,7 +28,7 @@ Based on those, this visitor emitted all intermediate code into the output .ll f
 
 ## Implementation Details
 
-Source code happens to commented in maybe too a little too much detail, so only important and complex parts of the
+Source code happens to be commented in maybe a little too much detail, so only important and complex parts of the
 implementation will be pointed out here.
 
 ### MessageSend
@@ -117,7 +117,7 @@ Of course a pretty cool test script was added, written in bash. One can find it 
 It generates, compiles and runs intermediate code for each .java file under *tests/in*.
 A complete example highlighting all properties of MiniJava-Compiler is the one name *MyExample.java*.
 Another interesting one is *OutOfBounds.java* which verifies that the array index check mentioned above
-actually works by failing at execution. Run it from any directory of level 1(src, tests or build) as follows:
+actually works by failing at execution. Run it from any location inside the repository as follows:
 
 ```bash
 MiniJava-Compiler/tests $ ./tester.sh

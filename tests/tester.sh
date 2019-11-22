@@ -6,10 +6,10 @@ error_msg(){
 }
 
 # get absolute paths of build and test directories
-execPath=$(dirname $(find .. -name "Main.class"))
+base=$(git rev-parse --show-toplevel) # repo path
+execPath=$(dirname $(find $base -name "Main.class"))
 cd $execPath
-execPath=$(pwd)
-testPath=$(dirname $(pwd)/$(find .. -name "in"))/in
+testPath=$(find $base -name "in")
 let fail=0
 let shouldFail=2  # OutOfBounds should fail
 
